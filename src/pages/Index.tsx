@@ -9,6 +9,9 @@ const Index = () => {
   const { fonts, loading, addFont, removeFont } = useFonts();
   const [search, setSearch] = useState('');
   const [previewText, setPreviewText] = useState('');
+  
+  // Base URL for CDN-style links (current origin in production, or localhost in dev)
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   const filteredFonts = useMemo(() => {
     if (!search.trim()) return fonts;
@@ -54,6 +57,7 @@ const Index = () => {
             previewText={previewText}
             loading={loading}
             onDelete={removeFont}
+            baseUrl={baseUrl}
           />
         </section>
       </main>

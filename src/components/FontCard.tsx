@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Download, Code, Trash2, Copy, Check } from 'lucide-react';
+import { Download, Code, Trash2, Copy, Check, Link } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -20,16 +21,18 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FontFamily, generateInlineCSS } from '@/lib/fontDB';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { FontFamily, generateCSSImport, generateCSSLink } from '@/lib/fontDB';
 import { toast } from '@/hooks/use-toast';
 
 interface FontCardProps {
   font: FontFamily;
   previewText: string;
   onDelete: (id: string) => void;
+  baseUrl: string;
 }
 
-export function FontCard({ font, previewText, onDelete }: FontCardProps) {
+export function FontCard({ font, previewText, onDelete, baseUrl }: FontCardProps) {
   const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -60,9 +63,28 @@ export function FontCard({ font, previewText, onDelete }: FontCardProps) {
     });
   };
 
-  const cssCode = generateInlineCSS(font);
-  const cssImport = `/* Add to your CSS */\n${cssCode}\n/* Then use it */\n.your-element {\n  font-family: '${font.name}', ${font.category};\n}`;
-  const htmlUsage = `<!-- In your HTML/JSX -->\n<p style="font-family: '${font.name}', ${font.category};">Your text here</p>`;
+  const cssImportCode = generateCSSImport(font, baseUrl);
+  const cssLinkCode = generateCSSLink(font, baseUrl);
+  const cssUrl = `${baseUrl}/api/fonts/${font.id}/css`;
+  
+  const cssUsage = `/* Option 1: CSS @import */
+${cssImportCode}
+
+/* Option 2: HTML <link> */
+${cssLinkCode}
+
+/* Then use it in your CSS */
+.your-element {
+  font-family: '${font.name}', ${font.category};
+}`;
+
+  const htmlUsage = `<!-- Add to your <head> -->
+${cssLinkCode}
+
+<!-- Then use in your HTML -->
+<p style="font-family: '${font.name}', ${font.category};">
+  Your text here
+</p>`;
 
   const weightLabels: Record<number, string> = {
     100: 'Thin',
@@ -167,27 +189,55 @@ export function FontCard({ font, previewText, onDelete }: FontCardProps) {
 
       {/* Code Dialog */}
       <Dialog open={showCode} onOpenChange={setShowCode}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Use {font.name}</DialogTitle>
           </DialogHeader>
 
-          <Tabs defaultValue="css" className="mt-4">
-            <TabsList className="w-full">
+          {/* CDN URL */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Link className="w-4 h-4" />
+              CSS URL
+            </label>
+            <div className="flex gap-2">
+              <Input
+                value={cssUrl}
+                readOnly
+                className="font-mono text-xs flex-1"
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => copyToClipboard(cssUrl, 'URL')}
+              >
+                {copied === 'URL' ? (
+                  <Check className="w-4 h-4 text-green-500" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+
+          <Tabs defaultValue="css" className="flex-1 flex flex-col min-h-0">
+            <TabsList className="w-full shrink-0">
               <TabsTrigger value="css" className="flex-1">CSS</TabsTrigger>
               <TabsTrigger value="html" className="flex-1">HTML/JSX</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="css" className="mt-4">
-              <div className="relative">
-                <pre className="p-4 bg-secondary rounded-lg overflow-x-auto text-sm font-mono max-h-[400px] overflow-y-auto">
-                  <code className="text-foreground">{cssImport}</code>
-                </pre>
+            <TabsContent value="css" className="flex-1 min-h-0 mt-4">
+              <div className="relative h-full">
+                <ScrollArea className="h-[280px] rounded-lg border border-border">
+                  <pre className="p-4 bg-secondary text-sm font-mono">
+                    <code className="text-foreground whitespace-pre">{cssUsage}</code>
+                  </pre>
+                </ScrollArea>
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => copyToClipboard(cssImport, 'CSS')}
-                  className="absolute top-2 right-2"
+                  onClick={() => copyToClipboard(cssUsage, 'CSS')}
+                  className="absolute top-2 right-4 z-10"
                 >
                   {copied === 'CSS' ? (
                     <Check className="w-4 h-4 text-green-500" />
@@ -198,16 +248,18 @@ export function FontCard({ font, previewText, onDelete }: FontCardProps) {
               </div>
             </TabsContent>
 
-            <TabsContent value="html" className="mt-4">
-              <div className="relative">
-                <pre className="p-4 bg-secondary rounded-lg overflow-x-auto text-sm font-mono">
-                  <code className="text-foreground">{htmlUsage}</code>
-                </pre>
+            <TabsContent value="html" className="flex-1 min-h-0 mt-4">
+              <div className="relative h-full">
+                <ScrollArea className="h-[280px] rounded-lg border border-border">
+                  <pre className="p-4 bg-secondary text-sm font-mono">
+                    <code className="text-foreground whitespace-pre">{htmlUsage}</code>
+                  </pre>
+                </ScrollArea>
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => copyToClipboard(htmlUsage, 'HTML')}
-                  className="absolute top-2 right-2"
+                  className="absolute top-2 right-4 z-10"
                 >
                   {copied === 'HTML' ? (
                     <Check className="w-4 h-4 text-green-500" />

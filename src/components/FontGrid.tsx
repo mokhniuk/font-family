@@ -7,9 +7,10 @@ interface FontGridProps {
   previewText: string;
   loading: boolean;
   onDelete: (id: string) => void;
+  baseUrl: string;
 }
 
-export function FontGrid({ fonts, previewText, loading, onDelete }: FontGridProps) {
+export function FontGrid({ fonts, previewText, loading, onDelete, baseUrl }: FontGridProps) {
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -47,6 +48,7 @@ export function FontGrid({ fonts, previewText, loading, onDelete }: FontGridProp
           font={font}
           previewText={previewText}
           onDelete={onDelete}
+          baseUrl={baseUrl}
         />
       ))}
     </div>
