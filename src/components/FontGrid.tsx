@@ -67,7 +67,7 @@ export function FontGrid({
           onDelete={onDelete}
           onUpdate={onUpdate}
           onToggleFavorite={onToggleFavorite}
-          isFavorite={favorites.has(font.id)}
+          isFavorite={favorites?.has(font.id) ?? false}
           baseUrl={baseUrl}
           viewMode={viewMode}
         />
