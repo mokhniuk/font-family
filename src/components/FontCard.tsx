@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, Code, Trash2, Copy, Check, Link, Pencil } from 'lucide-react';
+import { Download, Code, Trash2, Copy, Check, Link, Pencil, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -27,19 +27,33 @@ import {
 } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { FontFamily, FontFile, generateCSSImport, generateCSSLink } from '@/lib/fontDB';
+import { FontFamily, FontFile, generateCSSImport, generateCSSLink, generateInlineCSS } from '@/lib/fontDB';
 import { FontEditor } from './FontEditor';
 import { toast } from '@/hooks/use-toast';
 
 interface FontCardProps {
   font: FontFamily;
   previewText: string;
+  previewSize: number;
   onDelete: (id: string) => void;
   onUpdate: (font: FontFamily) => Promise<void>;
+  onToggleFavorite: (id: string) => void;
+  isFavorite: boolean;
   baseUrl: string;
+  viewMode: 'grid' | 'list';
 }
 
-export function FontCard({ font, previewText, onDelete, onUpdate, baseUrl }: FontCardProps) {
+export function FontCard({ 
+  font, 
+  previewText, 
+  previewSize, 
+  onDelete, 
+  onUpdate, 
+  onToggleFavorite, 
+  isFavorite, 
+  baseUrl,
+  viewMode,
+}: FontCardProps) {
   const [showCode, setShowCode] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
@@ -75,6 +89,7 @@ export function FontCard({ font, previewText, onDelete, onUpdate, baseUrl }: Fon
   const cssImportCode = generateCSSImport(font, baseUrl);
   const cssLinkCode = generateCSSLink(font, baseUrl);
   const cssUrl = `${baseUrl}/api/fonts/${font.id}/css`;
+  const base64CSS = generateInlineCSS(font);
   
   const cssUsage = `/* Option 1: CSS @import */
 ${cssImportCode}
@@ -95,6 +110,13 @@ ${cssLinkCode}
   Your text here
 </p>`;
 
+  const base64Usage = `/* Base64 embedded CSS - no external requests needed */
+${base64CSS}
+/* Then use it in your CSS */
+.your-element {
+  font-family: '${font.name}', ${font.category};
+}`;
+
   const weightLabels: Record<number, string> = {
     100: 'Thin',
     200: 'ExtraLight',
@@ -111,138 +133,198 @@ ${cssLinkCode}
   const activeWeight = selectedStyle?.weight || 400;
   const activeStyle = selectedStyle?.style || 'normal';
 
+  const isListView = viewMode === 'list';
+
   return (
     <>
-      <div className="group relative bg-card card-gradient border border-border rounded-xl p-6 transition-all hover:border-muted-foreground/50 hover:glow-subtle animate-fade-in">
+      <div className={`group relative bg-card card-gradient border border-border rounded-xl p-6 transition-all hover:border-muted-foreground/50 hover:glow-subtle animate-fade-in ${isListView ? 'flex gap-6 items-start' : ''}`}>
         {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold text-foreground">{font.name}</h3>
-            <div className="flex items-center gap-2 mt-1">
-              <Badge variant="secondary" className="text-xs">
-                {font.category}
-              </Badge>
-              <span className="text-xs text-muted-foreground">
-                {font.files.length} style{font.files.length !== 1 ? 's' : ''}
-              </span>
+        <div className={`${isListView ? 'shrink-0 w-48' : 'mb-4'}`}>
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">{font.name}</h3>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="secondary" className="text-xs">
+                  {font.category}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {font.files.length} style{font.files.length !== 1 ? 's' : ''}
+                </span>
+              </div>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-1">
-            <button 
-              onClick={() => setShowEdit(true)}
-              className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-muted transition-all"
-            >
-              <Pencil className="w-4 h-4 text-muted-foreground" />
-            </button>
             
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <button className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-destructive/10 transition-all">
-                  <Trash2 className="w-4 h-4 text-destructive" />
+            {!isListView && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => onToggleFavorite(font.id)}
+                  className={`p-1.5 rounded-lg transition-all ${
+                    isFavorite 
+                      ? 'text-red-500 opacity-100' 
+                      : 'opacity-0 group-hover:opacity-100 hover:bg-muted text-muted-foreground'
+                  }`}
+                >
+                  <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
                 </button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete {font.name}?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently remove this font from your library. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => onDelete(font.id)} className="bg-destructive hover:bg-destructive/90">
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                <button 
+                  onClick={() => setShowEdit(true)}
+                  className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-muted transition-all"
+                >
+                  <Pencil className="w-4 h-4 text-muted-foreground" />
+                </button>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-destructive/10 transition-all">
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete {font.name}?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently remove this font from your library. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => onDelete(font.id)} className="bg-destructive hover:bg-destructive/90">
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Preview */}
-        <div 
-          className="min-h-[80px] flex items-center mb-4 text-2xl text-foreground transition-all"
-          style={{ 
-            fontFamily: `'${font.name}', ${font.category}`,
-            fontWeight: activeWeight,
-            fontStyle: activeStyle,
-          }}
-        >
-          {previewText || 'The quick brown fox jumps over the lazy dog'}
-        </div>
+        <div className={`${isListView ? 'flex-1 min-w-0' : ''}`}>
+          <div 
+            className={`${isListView ? 'min-h-[60px]' : 'min-h-[80px]'} flex items-center ${isListView ? '' : 'mb-4'} text-foreground transition-all`}
+            style={{ 
+              fontFamily: `'${font.name}', ${font.category}`,
+              fontWeight: activeWeight,
+              fontStyle: activeStyle,
+              fontSize: `${previewSize}px`,
+            }}
+          >
+            {previewText || 'The quick brown fox jumps over the lazy dog'}
+          </div>
 
-        {/* Weights preview - clickable chips */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {font.files.map((file, i) => (
-            <Popover key={i}>
-              <PopoverTrigger asChild>
-                <button
-                  onClick={() => setSelectedStyle(selectedStyle === file ? null : file)}
-                  className={`
-                    text-xs px-2 py-1 rounded transition-all
-                    ${selectedStyle === file 
-                      ? 'bg-primary text-primary-foreground ring-2 ring-primary/50' 
-                      : 'bg-secondary text-secondary-foreground hover:bg-muted'
-                    }
-                  `}
-                  style={{ 
-                    fontFamily: `'${font.name}', ${font.category}`,
-                    fontWeight: file.weight,
-                    fontStyle: file.style,
-                  }}
-                >
-                  {weightLabels[file.weight] || file.weight}
-                  {file.style === 'italic' && ' Italic'}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80 p-4" align="start">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{font.name}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {weightLabels[file.weight] || file.weight}
-                      {file.style === 'italic' && ' Italic'}
-                    </Badge>
-                  </div>
-                  <div 
-                    className="text-xl leading-relaxed text-foreground"
+          {/* Weights preview - clickable chips */}
+          <div className={`flex flex-wrap gap-2 ${isListView ? 'mt-3' : 'mb-4'}`}>
+            {font.files.map((file, i) => (
+              <Popover key={i}>
+                <PopoverTrigger asChild>
+                  <button
+                    onClick={() => setSelectedStyle(selectedStyle === file ? null : file)}
+                    className={`
+                      text-xs px-2 py-1 rounded transition-all
+                      ${selectedStyle === file 
+                        ? 'bg-primary text-primary-foreground ring-2 ring-primary/50' 
+                        : 'bg-secondary text-secondary-foreground hover:bg-muted'
+                      }
+                    `}
                     style={{ 
                       fontFamily: `'${font.name}', ${font.category}`,
                       fontWeight: file.weight,
                       fontStyle: file.style,
                     }}
                   >
-                    {previewText || 'The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.'}
+                    {weightLabels[file.weight] || file.weight}
+                    {file.style === 'italic' && ' Italic'}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-4" align="start">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{font.name}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {weightLabels[file.weight] || file.weight}
+                        {file.style === 'italic' && ' Italic'}
+                      </Badge>
+                    </div>
+                    <div 
+                      className="text-xl leading-relaxed text-foreground"
+                      style={{ 
+                        fontFamily: `'${font.name}', ${font.category}`,
+                        fontWeight: file.weight,
+                        fontStyle: file.style,
+                      }}
+                    >
+                      {previewText || 'The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.'}
+                    </div>
+                    <p className="text-xs text-muted-foreground font-mono">
+                      font-weight: {file.weight}; font-style: {file.style};
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground font-mono">
-                    font-weight: {file.weight}; font-style: {file.style};
-                  </p>
-                </div>
-              </PopoverContent>
-            </Popover>
-          ))}
+                </PopoverContent>
+              </Popover>
+            ))}
+          </div>
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className={`flex gap-2 ${isListView ? 'shrink-0 items-center' : ''}`}>
+          {isListView && (
+            <>
+              <button
+                onClick={() => onToggleFavorite(font.id)}
+                className={`p-2 rounded-lg transition-all ${
+                  isFavorite 
+                    ? 'text-red-500' 
+                    : 'opacity-0 group-hover:opacity-100 hover:bg-muted text-muted-foreground'
+                }`}
+              >
+                <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+              </button>
+              <button 
+                onClick={() => setShowEdit(true)}
+                className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-muted transition-all"
+              >
+                <Pencil className="w-4 h-4 text-muted-foreground" />
+              </button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-destructive/10 transition-all">
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete {font.name}?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently remove this font from your library. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onDelete(font.id)} className="bg-destructive hover:bg-destructive/90">
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
+          )}
           <Button
             variant="secondary"
             size="sm"
             onClick={() => setShowCode(true)}
-            className="flex-1 gap-2"
+            className="gap-2"
           >
             <Code className="w-4 h-4" />
-            Get Code
+            {!isListView && 'Get Code'}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={handleDownload}
-            className="flex-1 gap-2"
+            className="gap-2"
           >
             <Download className="w-4 h-4" />
-            Download
+            {!isListView && 'Download'}
           </Button>
         </div>
       </div>
@@ -292,6 +374,7 @@ ${cssLinkCode}
             <TabsList className="w-full shrink-0">
               <TabsTrigger value="css" className="flex-1">CSS</TabsTrigger>
               <TabsTrigger value="html" className="flex-1">HTML/JSX</TabsTrigger>
+              <TabsTrigger value="base64" className="flex-1">Base64</TabsTrigger>
             </TabsList>
 
             <TabsContent value="css" className="flex-1 min-h-0 mt-4">
@@ -330,6 +413,28 @@ ${cssLinkCode}
                   className="absolute top-2 right-4 z-10"
                 >
                   {copied === 'HTML' ? (
+                    <Check className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="base64" className="flex-1 min-h-0 mt-4">
+              <div className="relative h-full">
+                <ScrollArea className="h-[280px] rounded-lg border border-border">
+                  <pre className="p-4 bg-secondary text-sm font-mono">
+                    <code className="text-foreground whitespace-pre">{base64Usage}</code>
+                  </pre>
+                </ScrollArea>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => copyToClipboard(base64Usage, 'Base64 CSS')}
+                  className="absolute top-2 right-4 z-10"
+                >
+                  {copied === 'Base64 CSS' ? (
                     <Check className="w-4 h-4 text-green-500" />
                   ) : (
                     <Copy className="w-4 h-4" />
