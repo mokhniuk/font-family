@@ -5,20 +5,35 @@ import { Type } from 'lucide-react';
 interface FontGridProps {
   fonts: FontFamily[];
   previewText: string;
+  previewSize: number;
   loading: boolean;
   onDelete: (id: string) => void;
   onUpdate: (font: FontFamily) => Promise<void>;
+  onToggleFavorite: (id: string) => void;
+  favorites: Set<string>;
   baseUrl: string;
+  viewMode: 'grid' | 'list';
 }
 
-export function FontGrid({ fonts, previewText, loading, onDelete, onUpdate, baseUrl }: FontGridProps) {
+export function FontGrid({ 
+  fonts, 
+  previewText, 
+  previewSize, 
+  loading, 
+  onDelete, 
+  onUpdate, 
+  onToggleFavorite, 
+  favorites, 
+  baseUrl,
+  viewMode,
+}: FontGridProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'flex flex-col gap-4'}>
         {[...Array(6)].map((_, i) => (
           <div 
             key={i}
-            className="h-[200px] bg-card border border-border rounded-xl animate-pulse"
+            className={`bg-card border border-border rounded-xl animate-pulse ${viewMode === 'grid' ? 'h-[200px]' : 'h-[120px]'}`}
           />
         ))}
       </div>
@@ -42,15 +57,19 @@ export function FontGrid({ fonts, previewText, loading, onDelete, onUpdate, base
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'flex flex-col gap-4'}>
       {fonts.map((font) => (
         <FontCard
           key={font.id}
           font={font}
           previewText={previewText}
+          previewSize={previewSize}
           onDelete={onDelete}
           onUpdate={onUpdate}
+          onToggleFavorite={onToggleFavorite}
+          isFavorite={favorites.has(font.id)}
           baseUrl={baseUrl}
+          viewMode={viewMode}
         />
       ))}
     </div>

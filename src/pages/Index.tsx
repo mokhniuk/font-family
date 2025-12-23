@@ -1,23 +1,62 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { FontUploader } from '@/components/FontUploader';
 import { FontGrid } from '@/components/FontGrid';
 import { SearchBar } from '@/components/SearchBar';
-import { FontFilters, CategoryFilter, StyleFilter } from '@/components/FontFilters';
+import { FontFilters, CategoryFilter, StyleFilter, ViewMode } from '@/components/FontFilters';
 import { useFonts } from '@/hooks/useFonts';
+
+const FAVORITES_KEY = 'fonthost-favorites';
 
 const Index = () => {
   const { fonts, loading, addFont, updateFont, removeFont } = useFonts();
   const [search, setSearch] = useState('');
   const [previewText, setPreviewText] = useState('');
+  const [previewSize, setPreviewSize] = useState(24);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [styleFilter, setStyleFilter] = useState<StyleFilter>('all');
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   
   // Base URL for CDN-style links (current origin in production, or localhost in dev)
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
+  // Load favorites from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(FAVORITES_KEY);
+      if (stored) {
+        setFavorites(new Set(JSON.parse(stored)));
+      }
+    } catch (e) {
+      console.error('Failed to load favorites:', e);
+    }
+  }, []);
+
+  // Save favorites to localStorage
+  const saveFavorites = (newFavorites: Set<string>) => {
+    setFavorites(newFavorites);
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify([...newFavorites]));
+  };
+
+  const toggleFavorite = (id: string) => {
+    const newFavorites = new Set(favorites);
+    if (newFavorites.has(id)) {
+      newFavorites.delete(id);
+    } else {
+      newFavorites.add(id);
+    }
+    saveFavorites(newFavorites);
+  };
+
   const filteredFonts = useMemo(() => {
     return fonts.filter((font) => {
+      // Favorites filter
+      if (showFavoritesOnly && !favorites.has(font.id)) {
+        return false;
+      }
+      
       // Search filter
       if (search.trim()) {
         const query = search.toLowerCase();
@@ -45,7 +84,11 @@ const Index = () => {
       
       return true;
     });
-  }, [fonts, search, categoryFilter, styleFilter]);
+  }, [fonts, search, categoryFilter, styleFilter, showFavoritesOnly, favorites]);
+
+  const favoritesCount = useMemo(() => {
+    return fonts.filter(f => favorites.has(f.id)).length;
+  }, [fonts, favorites]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -70,6 +113,8 @@ const Index = () => {
             onSearchChange={setSearch}
             previewText={previewText}
             onPreviewChange={setPreviewText}
+            previewSize={previewSize}
+            onPreviewSizeChange={setPreviewSize}
             fontCount={filteredFonts.length}
           />
           
@@ -78,6 +123,11 @@ const Index = () => {
             onCategoryChange={setCategoryFilter}
             styleFilter={styleFilter}
             onStyleChange={setStyleFilter}
+            showFavoritesOnly={showFavoritesOnly}
+            onShowFavoritesOnlyChange={setShowFavoritesOnly}
+            favoritesCount={favoritesCount}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
           />
         </section>
 
@@ -86,10 +136,14 @@ const Index = () => {
           <FontGrid
             fonts={filteredFonts}
             previewText={previewText}
+            previewSize={previewSize}
             loading={loading}
             onDelete={removeFont}
             onUpdate={updateFont}
+            onToggleFavorite={toggleFavorite}
+            favorites={favorites}
             baseUrl={baseUrl}
+            viewMode={viewMode}
           />
         </section>
       </main>
