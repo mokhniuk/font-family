@@ -7,10 +7,11 @@ interface FontGridProps {
   previewText: string;
   loading: boolean;
   onDelete: (id: string) => void;
+  onUpdate: (font: FontFamily) => Promise<void>;
   baseUrl: string;
 }
 
-export function FontGrid({ fonts, previewText, loading, onDelete, baseUrl }: FontGridProps) {
+export function FontGrid({ fonts, previewText, loading, onDelete, onUpdate, baseUrl }: FontGridProps) {
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -31,10 +32,10 @@ export function FontGrid({ fonts, previewText, loading, onDelete, baseUrl }: Fon
           <Type className="w-12 h-12 text-muted-foreground" />
         </div>
         <h3 className="text-xl font-semibold text-foreground mb-2">
-          No fonts yet
+          No fonts found
         </h3>
         <p className="text-muted-foreground max-w-md">
-          Upload your first font to get started. You can add WOFF2, WOFF, TTF, OTF, or EOT files.
+          No fonts match your filters. Try adjusting your search or upload a new font.
         </p>
       </div>
     );
@@ -48,6 +49,7 @@ export function FontGrid({ fonts, previewText, loading, onDelete, baseUrl }: Fon
           font={font}
           previewText={previewText}
           onDelete={onDelete}
+          onUpdate={onUpdate}
           baseUrl={baseUrl}
         />
       ))}

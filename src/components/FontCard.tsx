@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, Code, Trash2, Copy, Check, Link } from 'lucide-react';
+import { Download, Code, Trash2, Copy, Check, Link, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -20,21 +20,30 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { FontFamily, generateCSSImport, generateCSSLink } from '@/lib/fontDB';
+import { FontFamily, FontFile, generateCSSImport, generateCSSLink } from '@/lib/fontDB';
+import { FontEditor } from './FontEditor';
 import { toast } from '@/hooks/use-toast';
 
 interface FontCardProps {
   font: FontFamily;
   previewText: string;
   onDelete: (id: string) => void;
+  onUpdate: (font: FontFamily) => Promise<void>;
   baseUrl: string;
 }
 
-export function FontCard({ font, previewText, onDelete, baseUrl }: FontCardProps) {
+export function FontCard({ font, previewText, onDelete, onUpdate, baseUrl }: FontCardProps) {
   const [showCode, setShowCode] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [selectedStyle, setSelectedStyle] = useState<FontFile | null>(null);
 
   const handleDownload = () => {
     font.files.forEach((file) => {
@@ -98,6 +107,10 @@ ${cssLinkCode}
     900: 'Black',
   };
 
+  // Determine active preview style
+  const activeWeight = selectedStyle?.weight || 400;
+  const activeStyle = selectedStyle?.style || 'normal';
+
   return (
     <>
       <div className="group relative bg-card card-gradient border border-border rounded-xl p-6 transition-all hover:border-muted-foreground/50 hover:glow-subtle animate-fade-in">
@@ -115,52 +128,99 @@ ${cssLinkCode}
             </div>
           </div>
           
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <button className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-destructive/10 transition-all">
-                <Trash2 className="w-4 h-4 text-destructive" />
-              </button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete {font.name}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently remove this font from your library. This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => onDelete(font.id)} className="bg-destructive hover:bg-destructive/90">
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={() => setShowEdit(true)}
+              className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-muted transition-all"
+            >
+              <Pencil className="w-4 h-4 text-muted-foreground" />
+            </button>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-destructive/10 transition-all">
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete {font.name}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently remove this font from your library. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => onDelete(font.id)} className="bg-destructive hover:bg-destructive/90">
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
 
         {/* Preview */}
         <div 
-          className="min-h-[80px] flex items-center mb-4 text-2xl text-foreground"
-          style={{ fontFamily: `'${font.name}', ${font.category}` }}
+          className="min-h-[80px] flex items-center mb-4 text-2xl text-foreground transition-all"
+          style={{ 
+            fontFamily: `'${font.name}', ${font.category}`,
+            fontWeight: activeWeight,
+            fontStyle: activeStyle,
+          }}
         >
           {previewText || 'The quick brown fox jumps over the lazy dog'}
         </div>
 
-        {/* Weights preview */}
+        {/* Weights preview - clickable chips */}
         <div className="flex flex-wrap gap-2 mb-4">
           {font.files.map((file, i) => (
-            <span
-              key={i}
-              className="text-xs px-2 py-1 rounded bg-secondary text-secondary-foreground"
-              style={{ 
-                fontFamily: `'${font.name}', ${font.category}`,
-                fontWeight: file.weight,
-                fontStyle: file.style,
-              }}
-            >
-              {weightLabels[file.weight] || file.weight}
-              {file.style === 'italic' && ' Italic'}
-            </span>
+            <Popover key={i}>
+              <PopoverTrigger asChild>
+                <button
+                  onClick={() => setSelectedStyle(selectedStyle === file ? null : file)}
+                  className={`
+                    text-xs px-2 py-1 rounded transition-all
+                    ${selectedStyle === file 
+                      ? 'bg-primary text-primary-foreground ring-2 ring-primary/50' 
+                      : 'bg-secondary text-secondary-foreground hover:bg-muted'
+                    }
+                  `}
+                  style={{ 
+                    fontFamily: `'${font.name}', ${font.category}`,
+                    fontWeight: file.weight,
+                    fontStyle: file.style,
+                  }}
+                >
+                  {weightLabels[file.weight] || file.weight}
+                  {file.style === 'italic' && ' Italic'}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4" align="start">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{font.name}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {weightLabels[file.weight] || file.weight}
+                      {file.style === 'italic' && ' Italic'}
+                    </Badge>
+                  </div>
+                  <div 
+                    className="text-xl leading-relaxed text-foreground"
+                    style={{ 
+                      fontFamily: `'${font.name}', ${font.category}`,
+                      fontWeight: file.weight,
+                      fontStyle: file.style,
+                    }}
+                  >
+                    {previewText || 'The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.'}
+                  </div>
+                  <p className="text-xs text-muted-foreground font-mono">
+                    font-weight: {file.weight}; font-style: {file.style};
+                  </p>
+                </div>
+              </PopoverContent>
+            </Popover>
           ))}
         </div>
 
@@ -186,6 +246,14 @@ ${cssLinkCode}
           </Button>
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <FontEditor
+        font={font}
+        open={showEdit}
+        onOpenChange={setShowEdit}
+        onSave={onUpdate}
+      />
 
       {/* Code Dialog */}
       <Dialog open={showCode} onOpenChange={setShowCode}>

@@ -29,8 +29,28 @@ export function useFonts() {
     await loadFonts();
   }, [loadFonts]);
 
+  const updateFont = useCallback(async (font: FontFamily) => {
+    // Remove old style tag if exists
+    const oldStyle = document.getElementById(`font-${font.id}`);
+    if (oldStyle) {
+      oldStyle.remove();
+    }
+    setLoadedFontIds((prev) => {
+      const next = new Set(prev);
+      next.delete(font.id);
+      return next;
+    });
+    
+    await addFont(font); // This uses put() which updates existing
+    await loadFonts();
+  }, [loadFonts]);
+
   const removeFont = useCallback(async (id: string) => {
     await deleteFont(id);
+    const oldStyle = document.getElementById(`font-${id}`);
+    if (oldStyle) {
+      oldStyle.remove();
+    }
     setLoadedFontIds((prev) => {
       const next = new Set(prev);
       next.delete(id);
@@ -66,6 +86,7 @@ export function useFonts() {
     fonts,
     loading,
     addFont: addNewFont,
+    updateFont,
     removeFont,
     refreshFonts: loadFonts,
   };
