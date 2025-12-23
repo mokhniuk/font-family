@@ -3,25 +3,49 @@ import { Header } from '@/components/Header';
 import { FontUploader } from '@/components/FontUploader';
 import { FontGrid } from '@/components/FontGrid';
 import { SearchBar } from '@/components/SearchBar';
+import { FontFilters, CategoryFilter, StyleFilter } from '@/components/FontFilters';
 import { useFonts } from '@/hooks/useFonts';
 
 const Index = () => {
-  const { fonts, loading, addFont, removeFont } = useFonts();
+  const { fonts, loading, addFont, updateFont, removeFont } = useFonts();
   const [search, setSearch] = useState('');
   const [previewText, setPreviewText] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
+  const [styleFilter, setStyleFilter] = useState<StyleFilter>('all');
   
   // Base URL for CDN-style links (current origin in production, or localhost in dev)
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   const filteredFonts = useMemo(() => {
-    if (!search.trim()) return fonts;
-    const query = search.toLowerCase();
-    return fonts.filter(
-      (font) =>
-        font.name.toLowerCase().includes(query) ||
-        font.category.toLowerCase().includes(query)
-    );
-  }, [fonts, search]);
+    return fonts.filter((font) => {
+      // Search filter
+      if (search.trim()) {
+        const query = search.toLowerCase();
+        if (!font.name.toLowerCase().includes(query) && 
+            !font.category.toLowerCase().includes(query)) {
+          return false;
+        }
+      }
+      
+      // Category filter
+      if (categoryFilter !== 'all' && font.category !== categoryFilter) {
+        return false;
+      }
+      
+      // Style filter - check if font has matching styles
+      if (styleFilter !== 'all') {
+        if (styleFilter === 'italic') {
+          const hasItalic = font.files.some(f => f.style === 'italic');
+          if (!hasItalic) return false;
+        } else if (styleFilter === 'bold') {
+          const hasBold = font.files.some(f => f.weight >= 600);
+          if (!hasBold) return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [fonts, search, categoryFilter, styleFilter]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -40,13 +64,20 @@ const Index = () => {
         </section>
 
         {/* Search and Filters */}
-        <section className="mb-8">
+        <section className="space-y-6 mb-8">
           <SearchBar
             search={search}
             onSearchChange={setSearch}
             previewText={previewText}
             onPreviewChange={setPreviewText}
             fontCount={filteredFonts.length}
+          />
+          
+          <FontFilters
+            categoryFilter={categoryFilter}
+            onCategoryChange={setCategoryFilter}
+            styleFilter={styleFilter}
+            onStyleChange={setStyleFilter}
           />
         </section>
 
@@ -57,6 +88,7 @@ const Index = () => {
             previewText={previewText}
             loading={loading}
             onDelete={removeFont}
+            onUpdate={updateFont}
             baseUrl={baseUrl}
           />
         </section>
