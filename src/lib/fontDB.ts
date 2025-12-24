@@ -1,11 +1,19 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 
+export interface FontFileVariant {
+  name: string;
+  data: ArrayBuffer;
+  format: string;
+}
+
 export interface FontFile {
   name: string;
   weight: number;
   style: 'normal' | 'italic';
   data: ArrayBuffer;
   format: string;
+  // Grouped variants of same weight+style in different formats
+  variants?: FontFileVariant[];
 }
 
 export interface FontFamily {
@@ -15,6 +23,9 @@ export interface FontFamily {
   files: FontFile[];
   createdAt: number;
   previewUrl?: string;
+  author?: string;
+  description?: string;
+  license?: string;
 }
 
 interface FontDBSchema extends DBSchema {

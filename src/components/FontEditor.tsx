@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Upload, File, X, Pencil, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Select,
   SelectContent,
@@ -36,8 +37,21 @@ export function FontEditor({ font, open, onOpenChange, onSave }: FontEditorProps
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState<FontFile[]>(font.files);
   const [fontName, setFontName] = useState(font.name);
+  const [author, setAuthor] = useState(font.author || '');
+  const [description, setDescription] = useState(font.description || '');
+  const [license, setLicense] = useState(font.license || '');
   const [category, setCategory] = useState<FontFamily['category']>(font.category);
   const [saving, setSaving] = useState(false);
+
+  // Reset form when font changes
+  useEffect(() => {
+    setFiles(font.files);
+    setFontName(font.name);
+    setAuthor(font.author || '');
+    setDescription(font.description || '');
+    setLicense(font.license || '');
+    setCategory(font.category);
+  }, [font]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -51,7 +65,6 @@ export function FontEditor({ font, open, onOpenChange, onSave }: FontEditorProps
 
   const processFiles = useCallback(async (fileList: FileList) => {
     const validExtensions = ['.woff2', '.woff', '.ttf', '.otf', '.eot'];
-    const newFiles: FontFile[] = [];
 
     for (const file of Array.from(fileList)) {
       const ext = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -65,16 +78,40 @@ export function FontEditor({ font, open, onOpenChange, onSave }: FontEditorProps
       }
 
       const buffer = await file.arrayBuffer();
-      newFiles.push({
-        name: file.name,
-        weight: detectFontWeight(file.name),
-        style: detectFontStyle(file.name),
-        data: buffer,
-        format: detectFontFormat(file.name),
+      const weight = detectFontWeight(file.name);
+      const style = detectFontStyle(file.name);
+      const format = detectFontFormat(file.name);
+
+      // Check if we already have a file with same weight+style - group as variant
+      setFiles((prev) => {
+        const existingIndex = prev.findIndex(
+          (f) => f.weight === weight && f.style === style
+        );
+        
+        if (existingIndex >= 0) {
+          // Add as variant to existing
+          const updated = [...prev];
+          const existing = updated[existingIndex];
+          const variants = existing.variants || [];
+          variants.push({
+            name: file.name,
+            data: buffer,
+            format,
+          });
+          updated[existingIndex] = { ...existing, variants };
+          return updated;
+        } else {
+          // Add as new file
+          return [...prev, {
+            name: file.name,
+            weight,
+            style,
+            data: buffer,
+            format,
+          }];
+        }
       });
     }
-
-    setFiles((prev) => [...prev, ...newFiles]);
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -127,6 +164,9 @@ export function FontEditor({ font, open, onOpenChange, onSave }: FontEditorProps
         name: fontName.trim(),
         category,
         files,
+        author: author.trim() || undefined,
+        description: description.trim() || undefined,
+        license: license.trim() || undefined,
       };
 
       await onSave(updatedFont);
@@ -205,10 +245,41 @@ export function FontEditor({ font, open, onOpenChange, onSave }: FontEditorProps
               </Select>
             </div>
 
+            {/* Author */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Author</label>
+              <Input
+                value={author}
+                onChange={(e) => setAuthor(e.target.value)}
+                placeholder="e.g., Google, Adobe"
+              />
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Description</label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Brief description..."
+                rows={2}
+              />
+            </div>
+
+            {/* License */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">License</label>
+              <Input
+                value={license}
+                onChange={(e) => setLicense(e.target.value)}
+                placeholder="e.g., OFL, Apache 2.0"
+              />
+            </div>
+
             {/* Font files */}
             <div className="space-y-3">
               <p className="text-sm font-medium text-foreground">
-                Font Files ({files.length})
+                Styles ({files.length})
               </p>
               
               {files.map((file, index) => (
