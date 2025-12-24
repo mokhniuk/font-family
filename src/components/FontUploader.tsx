@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   FontFamily, 
   FontFile,
@@ -35,6 +36,8 @@ export function FontUploader({ onUpload }: FontUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState<FontFile[]>([]);
   const [fontName, setFontName] = useState('');
+  const [author, setAuthor] = useState('');
+  const [description, setDescription] = useState('');
   const [category, setCategory] = useState<FontFamily['category']>('sans-serif');
   const [uploading, setUploading] = useState(false);
 
@@ -50,7 +53,6 @@ export function FontUploader({ onUpload }: FontUploaderProps) {
 
   const processFiles = useCallback(async (fileList: FileList) => {
     const validExtensions = ['.woff2', '.woff', '.ttf', '.otf', '.eot'];
-    const newFiles: FontFile[] = [];
 
     for (const file of Array.from(fileList)) {
       const ext = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -64,16 +66,42 @@ export function FontUploader({ onUpload }: FontUploaderProps) {
       }
 
       const buffer = await file.arrayBuffer();
-      newFiles.push({
-        name: file.name,
-        weight: detectFontWeight(file.name),
-        style: detectFontStyle(file.name),
-        data: buffer,
-        format: detectFontFormat(file.name),
+      const weight = detectFontWeight(file.name);
+      const style = detectFontStyle(file.name);
+      const format = detectFontFormat(file.name);
+
+      // Check if we already have a file with same weight+style - group as variant
+      setFiles((prev) => {
+        const existingIndex = prev.findIndex(
+          (f) => f.weight === weight && f.style === style
+        );
+        
+        if (existingIndex >= 0) {
+          // Add as variant to existing
+          const updated = [...prev];
+          const existing = updated[existingIndex];
+          const variants = existing.variants || [];
+          variants.push({
+            name: file.name,
+            data: buffer,
+            format,
+          });
+          updated[existingIndex] = { ...existing, variants };
+          return updated;
+        } else {
+          // Add as new file
+          return [...prev, {
+            name: file.name,
+            weight,
+            style,
+            data: buffer,
+            format,
+          }];
+        }
       });
 
       // Auto-detect font name from first file if not set
-      if (!fontName && newFiles.length === 1) {
+      if (!fontName) {
         const baseName = file.name
           .replace(/\.(woff2?|ttf|otf|eot)$/i, '')
           .replace(/[-_](regular|bold|light|medium|semibold|thin|black|italic|oblique|\d{3})/gi, '')
@@ -82,8 +110,6 @@ export function FontUploader({ onUpload }: FontUploaderProps) {
         setFontName(baseName);
       }
     }
-
-    setFiles((prev) => [...prev, ...newFiles]);
   }, [fontName]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -129,6 +155,8 @@ export function FontUploader({ onUpload }: FontUploaderProps) {
         category,
         files,
         createdAt: Date.now(),
+        author: author.trim() || undefined,
+        description: description.trim() || undefined,
       };
 
       await onUpload(font);
@@ -141,6 +169,8 @@ export function FontUploader({ onUpload }: FontUploaderProps) {
       // Reset form
       setFiles([]);
       setFontName('');
+      setAuthor('');
+      setDescription('');
       setCategory('sans-serif');
       setOpen(false);
     } catch (error) {
@@ -213,33 +243,40 @@ export function FontUploader({ onUpload }: FontUploaderProps) {
           {files.length > 0 && (
             <div className="space-y-2">
               <p className="text-sm font-medium text-foreground">
-                Files ({files.length})
+                Styles ({files.length})
               </p>
               <div className="max-h-40 overflow-y-auto space-y-2">
-                {files.map((file, index) => (
-                  <div 
-                    key={index}
-                    className="flex items-center justify-between p-3 bg-secondary rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <File className="w-4 h-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm font-medium truncate max-w-[200px]">
-                          {file.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {weightLabels[file.weight] || file.weight} {file.style !== 'normal' && `• ${file.style}`}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => removeFile(index)}
-                      className="p-1 hover:bg-muted rounded"
+                {files.map((file, index) => {
+                  const formats = [file.format, ...(file.variants?.map(v => v.format) || [])];
+                  return (
+                    <div 
+                      key={index}
+                      className="flex items-center justify-between p-3 bg-secondary rounded-lg"
                     >
-                      <X className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex items-center gap-3">
+                        <File className="w-4 h-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">
+                            {weightLabels[file.weight] || file.weight} {file.style !== 'normal' && `• ${file.style}`}
+                          </p>
+                          <div className="flex gap-1 mt-1">
+                            {formats.map((fmt, i) => (
+                              <span key={i} className="text-xs bg-muted px-1.5 py-0.5 rounded uppercase">
+                                {fmt}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeFile(index)}
+                        className="p-1 hover:bg-muted rounded"
+                      >
+                        <X className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -273,6 +310,31 @@ export function FontUploader({ onUpload }: FontUploaderProps) {
                 <SelectItem value="handwriting">Handwriting</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Author */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">
+              Author <span className="text-muted-foreground font-normal">(optional)</span>
+            </label>
+            <Input
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
+              placeholder="e.g., Google, Adobe, Type Designer Name"
+            />
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">
+              Description <span className="text-muted-foreground font-normal">(optional)</span>
+            </label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Brief description of the font..."
+              rows={2}
+            />
           </div>
 
           <Button 

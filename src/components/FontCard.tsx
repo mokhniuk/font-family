@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Download, Code, Trash2, Copy, Check, Link, Pencil, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +55,7 @@ export function FontCard({
   baseUrl,
   viewMode,
 }: FontCardProps) {
+  const navigate = useNavigate();
   const [showCode, setShowCode] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
@@ -142,7 +144,12 @@ ${base64CSS}
         <div className={`${isListView ? 'shrink-0 w-48' : 'mb-4'}`}>
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-foreground">{font.name}</h3>
+              <h3 
+                className="text-lg font-semibold text-foreground hover:text-primary cursor-pointer transition-colors"
+                onClick={() => navigate(`/font/${font.id}`)}
+              >
+                {font.name}
+              </h3>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="secondary" className="text-xs">
                   {font.category}
