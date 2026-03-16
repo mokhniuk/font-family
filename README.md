@@ -1,73 +1,67 @@
-# Welcome to your Lovable project
+# Font Foundry Hub
 
-## Project info
+**Font Foundry Hub** is a self-hosted font management platform designed for designers and developers who want complete control over their font library. Upload, preview, organize, and serve your custom fonts from a single, private interface.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 🚀 Features
 
-## How can I edit this code?
+- **Private Self-Hosting**: Manage your font library locally with lightning-fast performance.
+- **Smart Uploader**: Drag and drop support for TrueType (`.ttf`), OpenType (`.otf`), and Web Open Font Format (`.woff`, `.woff2`).
+- **Live Interactive Previews**: Test fonts in real-time with custom text, adjustable sizes, and various weights/styles.
+- **Code Snippet Generation**: Instantly get CSS `@font-face` imports, HTML links, or Base64-encoded strings for easy integration into your web projects.
+- **Font Pairing Engine**: Get AI-inspired suggestions for header and body text combinations based on your font's category.
+- **Detailed Metadata**: Track font authorship, descriptions, licenses, and categories.
+- **Browser-Powered Storage**: All font data is securely stored in your browser's **IndexedDB**, ensuring privacy and offline availability.
 
-There are several ways of editing your application.
+## 🛠️ Tech Stack
 
-**Use Lovable**
+- **Framework**: [React 18](https://reactjs.org/) with [Vite](https://vitejs.dev/)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **UI Components**: [shadcn/ui](https://ui.shadcn.com/) (Radix UI)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Data Management**: [TanStack Query](https://tanstack.com/query) & [IDB](https://github.com/jakearchibald/idb)
+- **Routing**: [React Router 6](https://reactrouter.com/)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## 🏁 Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+### Prerequisites
 
-**Use your preferred IDE**
+Ensure you have [Bun](https://bun.sh/) or [Node.js](https://nodejs.org/) installed.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+### Installation
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Clone the repository
+git clone <repository-url>
+cd font-foundry-hub
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Install dependencies
+bun install
+# or
+npm install
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+### Development
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```sh
+bun dev
+# or
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The application will be available at `http://localhost:5173`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 📦 Project Structure
 
-**Use GitHub Codespaces**
+- `src/components`: UI components (Heads, Grids, Uploaders, Modals).
+- `src/pages`: Application views (Library, Font Details).
+- `src/lib`: Database logic (IndexedDB) and font processing utilities.
+- `src/hooks`: Custom React hooks for font state management and UI interactions.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 📝 License
 
-## What technologies are used for this project?
+Distributed under the MIT License. See `LICENSE` for more information.
 
-This project is built with:
+---
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Created by **Oleg Mokhniuk**.
