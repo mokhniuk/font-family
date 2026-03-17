@@ -65,6 +65,7 @@ export function FontEditor({ font, open, onOpenChange, onSave }: FontEditorProps
 
   const processFiles = useCallback(async (fileList: FileList) => {
     const validExtensions = ['.woff2', '.woff', '.ttf', '.otf', '.eot'];
+    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
 
     for (const file of Array.from(fileList)) {
       const ext = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -72,6 +73,15 @@ export function FontEditor({ font, open, onOpenChange, onSave }: FontEditorProps
         toast({
           title: 'Invalid file type',
           description: `${file.name} is not a valid font file`,
+          variant: 'destructive',
+        });
+        continue;
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        toast({
+          title: 'File too large',
+          description: `${file.name} exceeds the 50 MB limit`,
           variant: 'destructive',
         });
         continue;
@@ -177,10 +187,10 @@ export function FontEditor({ font, open, onOpenChange, onSave }: FontEditorProps
       });
 
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Save failed',
-        description: 'Something went wrong while saving the font',
+        description: error?.message ?? 'Something went wrong while saving the font',
         variant: 'destructive',
       });
     } finally {

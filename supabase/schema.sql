@@ -1,5 +1,5 @@
 -- ============================================================
--- Font Foundry Hub — Supabase Schema
+-- Font Family — Supabase Schema
 -- Run this in your Supabase project's SQL editor
 -- ============================================================
 

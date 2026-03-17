@@ -17,6 +17,7 @@ interface FontFiltersProps {
   favoritesCount: number;
   viewMode: ViewMode;
   onViewModeChange: (value: ViewMode) => void;
+  fontCount: number;
 }
 
 const categories: { value: CategoryFilter; label: string }[] = [
@@ -44,18 +45,19 @@ export function FontFilters({
   favoritesCount,
   viewMode,
   onViewModeChange,
+  fontCount,
 }: FontFiltersProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-4 justify-between">
       <div className="flex flex-col sm:flex-row gap-4">
-        {/* Favorites filter */}
+        {/* Favorites */}
         <div className="space-y-2">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Collection</p>
           <Button
-            variant={showFavoritesOnly ? 'default' : 'outline'}
+            variant="outline"
             size="sm"
             onClick={() => onShowFavoritesOnlyChange(!showFavoritesOnly)}
-            className="gap-2"
+            className={`gap-2 ${showFavoritesOnly ? 'bg-foreground text-background border-foreground hover:bg-foreground/90 hover:text-background' : ''}`}
           >
             <Heart className={`w-4 h-4 ${showFavoritesOnly ? 'fill-current' : ''}`} />
             Favorites
@@ -67,7 +69,7 @@ export function FontFilters({
           </Button>
         </div>
 
-        {/* Category filter */}
+        {/* Category */}
         <div className="space-y-2">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Category</p>
           <ToggleGroup
@@ -81,7 +83,7 @@ export function FontFilters({
                 key={cat.value}
                 value={cat.value}
                 size="sm"
-                className="text-xs px-3 py-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                className="text-xs px-3 py-1.5 data-[state=on]:bg-foreground data-[state=on]:text-background"
               >
                 {cat.label}
               </ToggleGroupItem>
@@ -89,7 +91,7 @@ export function FontFilters({
           </ToggleGroup>
         </div>
 
-        {/* Style filter */}
+        {/* Style */}
         <div className="space-y-2">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Style</p>
           <ToggleGroup
@@ -103,7 +105,7 @@ export function FontFilters({
                 key={style.value}
                 value={style.value}
                 size="sm"
-                className="text-xs px-3 py-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                className="text-xs px-3 py-1.5 data-[state=on]:bg-foreground data-[state=on]:text-background"
               >
                 {style.label}
               </ToggleGroupItem>
@@ -112,30 +114,35 @@ export function FontFilters({
         </div>
       </div>
 
-      {/* View mode switcher */}
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">View</p>
-        <ToggleGroup
-          type="single"
-          value={viewMode}
-          onValueChange={(v) => v && onViewModeChange(v as ViewMode)}
-          className="flex gap-1"
-        >
-          <ToggleGroupItem
-            value="grid"
-            size="sm"
-            className="px-2 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+      {/* Right side: count + view toggle */}
+      <div className="flex items-end gap-4">
+        <p className="text-sm text-muted-foreground pb-0.5 tabular-nums">
+          {fontCount} {fontCount === 1 ? 'font' : 'fonts'}
+        </p>
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">View</p>
+          <ToggleGroup
+            type="single"
+            value={viewMode}
+            onValueChange={(v) => v && onViewModeChange(v as ViewMode)}
+            className="flex gap-1"
           >
-            <LayoutGrid className="w-4 h-4" />
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value="list"
-            size="sm"
-            className="px-2 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-          >
-            <List className="w-4 h-4" />
-          </ToggleGroupItem>
-        </ToggleGroup>
+            <ToggleGroupItem
+              value="grid"
+              size="sm"
+              className="px-2 data-[state=on]:bg-foreground data-[state=on]:text-background"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="list"
+              size="sm"
+              className="px-2 data-[state=on]:bg-foreground data-[state=on]:text-background"
+            >
+              <List className="w-4 h-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
       </div>
     </div>
   );

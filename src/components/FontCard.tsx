@@ -62,28 +62,36 @@ export function FontCard({
   const [showEdit, setShowEdit] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [selectedStyle, setSelectedStyle] = useState<FontFile | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   const handleDownload = async () => {
-    for (const file of font.files) {
-      const allFiles = [
-        { name: file.name, url: file.storageUrl! },
-        ...(file.variants?.map((v) => ({ name: v.name, url: v.storageUrl! })) ?? []),
-      ];
+    setDownloading(true);
+    try {
+      for (const file of font.files) {
+        const allFiles = [
+          { name: file.name, url: file.storageUrl! },
+          ...(file.variants?.map((v) => ({ name: v.name, url: v.storageUrl! })) ?? []),
+        ];
 
-      for (const f of allFiles) {
-        if (!f.url) continue;
-        const response = await fetch(f.url);
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = f.name;
-        a.click();
-        URL.revokeObjectURL(url);
+        for (const f of allFiles) {
+          if (!f.url) continue;
+          const response = await fetch(f.url);
+          if (!response.ok) throw new Error(`Failed to download ${f.name}`);
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = f.name;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
       }
+      toast({ title: 'Download started', description: `Downloading ${font.files.length} style(s)` });
+    } catch (error: any) {
+      toast({ title: 'Download failed', description: error.message ?? 'Could not download font files', variant: 'destructive' });
+    } finally {
+      setDownloading(false);
     }
-
-    toast({ title: 'Download started', description: `Downloading ${font.files.length} style(s)` });
   };
 
   const copyToClipboard = async (text: string, type: string) => {
@@ -125,6 +133,14 @@ ${fontFaceCSS}
   font-family: '${font.name}', ${font.category};
 }`;
 
+  const categoryColors: Record<string, string> = {
+    'sans-serif': 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300',
+    'serif': 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300',
+    'monospace': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+    'display': 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300',
+    'handwriting': 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300',
+  };
+
   const weightLabels: Record<number, string> = {
     100: 'Thin', 200: 'ExtraLight', 300: 'Light', 400: 'Regular',
     500: 'Medium', 600: 'SemiBold', 700: 'Bold', 800: 'ExtraBold', 900: 'Black',
@@ -134,21 +150,75 @@ ${fontFaceCSS}
   const activeStyle = selectedStyle?.style ?? 'normal';
   const isListView = viewMode === 'list';
 
+  const weightChips = (
+    <>
+      {font.files.map((file, i) => (
+        <Popover key={i}>
+          <PopoverTrigger asChild>
+            <button
+              onClick={() => setSelectedStyle(selectedStyle === file ? null : file)}
+              className={`text-xs px-2 py-1 rounded transition-all ${
+                selectedStyle === file
+                  ? 'bg-foreground text-background'
+                  : 'bg-secondary text-secondary-foreground hover:bg-muted'
+              }`}
+              style={{
+                fontFamily: `'${font.name}', ${font.category}`,
+                fontWeight: file.weight,
+                fontStyle: file.style,
+              }}
+            >
+              {weightLabels[file.weight] || file.weight}
+              {file.style === 'italic' && ' Italic'}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-4" align="start">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">{font.name}</span>
+                <Badge variant="outline" className="text-xs">
+                  {weightLabels[file.weight] || file.weight}
+                  {file.style === 'italic' && ' Italic'}
+                </Badge>
+              </div>
+              <div
+                className="text-xl leading-relaxed text-foreground"
+                style={{
+                  fontFamily: `'${font.name}', ${font.category}`,
+                  fontWeight: file.weight,
+                  fontStyle: file.style,
+                }}
+              >
+                {previewText || 'The quick brown fox jumps over the lazy dog.'}
+              </div>
+              <p className="text-xs text-muted-foreground font-mono">
+                font-weight: {file.weight}; font-style: {file.style};
+              </p>
+            </div>
+          </PopoverContent>
+        </Popover>
+      ))}
+    </>
+  );
+
   return (
     <>
-      <div className={`group relative bg-card card-gradient border border-border rounded-xl p-6 transition-all hover:border-muted-foreground/50 hover:glow-subtle animate-fade-in ${isListView ? 'flex gap-6 items-start' : ''}`}>
+      <div className={`group relative bg-card border border-border rounded-xl p-6 transition-colors hover:border-muted-foreground/50 ${isListView ? 'flex gap-6 items-start' : 'flex flex-col'}`}>
         {/* Header */}
-        <div className={`${isListView ? 'shrink-0 w-48' : 'mb-4'}`}>
+        <div className={`${isListView ? 'shrink-0 w-48' : 'mb-3'}`}>
           <div className="flex items-start justify-between">
-            <div>
+            <div className="min-w-0">
               <h3
-                className="text-lg font-semibold text-foreground hover:text-primary cursor-pointer transition-colors"
+                className="text-lg font-semibold text-foreground hover:text-primary cursor-pointer transition-colors truncate"
                 onClick={() => navigate(`/font/${font.id}`)}
+                title={font.name}
               >
                 {font.name}
               </h3>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant="secondary" className="text-xs">{font.category}</Badge>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${categoryColors[font.category] ?? 'bg-secondary text-secondary-foreground'}`}>
+                  {font.category}
+                </span>
                 <span className="text-xs text-muted-foreground">
                   {font.files.length} style{font.files.length !== 1 ? 's' : ''}
                 </span>
@@ -205,9 +275,9 @@ ${fontFaceCSS}
         </div>
 
         {/* Preview */}
-        <div className={`${isListView ? 'flex-1 min-w-0' : ''}`}>
+        <div className={`${isListView ? 'flex-1 min-w-0' : 'flex-1'}`}>
           <div
-            className={`${isListView ? 'min-h-[60px]' : 'min-h-[80px]'} flex items-center ${isListView ? '' : 'mb-4'} text-foreground transition-all`}
+            className={`${isListView ? 'min-h-[60px]' : 'min-h-[160px]'} flex items-center text-foreground transition-all overflow-hidden`}
             style={{
               fontFamily: `'${font.name}', ${font.category}`,
               fontWeight: activeWeight,
@@ -218,59 +288,24 @@ ${fontFaceCSS}
             {previewText || 'The quick brown fox jumps over the lazy dog'}
           </div>
 
-          {/* Weight chips */}
-          <div className={`flex flex-wrap gap-2 ${isListView ? 'mt-3' : 'mb-4'}`}>
-            {font.files.map((file, i) => (
-              <Popover key={i}>
-                <PopoverTrigger asChild>
-                  <button
-                    onClick={() => setSelectedStyle(selectedStyle === file ? null : file)}
-                    className={`text-xs px-2 py-1 rounded transition-all ${
-                      selectedStyle === file
-                        ? 'bg-primary text-primary-foreground ring-2 ring-primary/50'
-                        : 'bg-secondary text-secondary-foreground hover:bg-muted'
-                    }`}
-                    style={{
-                      fontFamily: `'${font.name}', ${font.category}`,
-                      fontWeight: file.weight,
-                      fontStyle: file.style,
-                    }}
-                  >
-                    {weightLabels[file.weight] || file.weight}
-                    {file.style === 'italic' && ' Italic'}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 p-4" align="start">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{font.name}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {weightLabels[file.weight] || file.weight}
-                        {file.style === 'italic' && ' Italic'}
-                      </Badge>
-                    </div>
-                    <div
-                      className="text-xl leading-relaxed text-foreground"
-                      style={{
-                        fontFamily: `'${font.name}', ${font.category}`,
-                        fontWeight: file.weight,
-                        fontStyle: file.style,
-                      }}
-                    >
-                      {previewText || 'The quick brown fox jumps over the lazy dog.'}
-                    </div>
-                    <p className="text-xs text-muted-foreground font-mono">
-                      font-weight: {file.weight}; font-style: {file.style};
-                    </p>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            ))}
-          </div>
+          {/* Weight chips — list view: shown inline after preview */}
+          {isListView && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {weightChips}
+            </div>
+          )}
         </div>
 
-        {/* Actions */}
-        <div className={`flex gap-2 ${isListView ? 'shrink-0 items-center' : ''}`}>
+        {/* Footer */}
+        <div className={`flex gap-2 ${isListView ? 'shrink-0 items-center' : 'mt-4 pt-3 border-t border-border items-center justify-between'}`}>
+          {/* Grid: weight chips on left */}
+          {!isListView && (
+            <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
+              {weightChips}
+            </div>
+          )}
+
+          {/* List: admin actions */}
           {isListView && (
             <>
               <button
@@ -311,14 +346,18 @@ ${fontFaceCSS}
               )}
             </>
           )}
-          <Button variant="secondary" size="sm" onClick={() => setShowCode(true)} className="gap-2">
-            <Code className="w-4 h-4" />
-            {!isListView && 'Get Code'}
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleDownload} className="gap-2">
-            <Download className="w-4 h-4" />
-            {!isListView && 'Download'}
-          </Button>
+
+          {/* Action buttons */}
+          <div className={`flex gap-2 ${!isListView ? 'shrink-0' : ''}`}>
+            <Button variant="default" size="sm" onClick={() => setShowCode(true)} className="gap-2">
+              <Code className="w-4 h-4" />
+              {!isListView && 'Get Code'}
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDownload} disabled={downloading} className="gap-2">
+              <Download className="w-4 h-4" />
+              {!isListView && (downloading ? 'Downloading…' : 'Download')}
+            </Button>
+          </div>
         </div>
       </div>
 

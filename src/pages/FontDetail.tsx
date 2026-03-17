@@ -17,6 +17,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FontFamily, getFont, generateCSSImport, generateCSSLink, generateFontFaceCSS, getCSSUrl } from '@/lib/fontDB';
 import { useFonts } from '@/hooks/useFonts';
+import { useFavorites } from '@/hooks/useFavorites';
 import { FontEditor } from '@/components/FontEditor';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -37,11 +38,20 @@ const popularPairings = [
   { heading: 'Display', body: 'Serif', description: 'Eye-catching with elegant readability' },
 ];
 
+const categoryColors: Record<string, string> = {
+  'sans-serif': 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300',
+  'serif': 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300',
+  'monospace': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+  'display': 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300',
+  'handwriting': 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300',
+};
+
 export default function FontDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { fonts, updateFont } = useFonts();
   const { user } = useAuth();
+  const { favorites, toggleFavorite } = useFavorites();
   const isAdmin = !!user;
   const [font, setFont] = useState<FontFamily | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,10 +60,6 @@ export default function FontDetail() {
   const [showEdit, setShowEdit] = useState(false);
   const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
-  const [favorites, setFavorites] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem('fontFavorites');
-    return saved ? new Set(JSON.parse(saved)) : new Set();
-  });
 
   useEffect(() => {
     async function loadFont() {
@@ -70,18 +76,6 @@ export default function FontDetail() {
     }
     loadFont();
   }, [id, fonts]);
-
-  const toggleFavorite = () => {
-    if (!font) return;
-    const newFavorites = new Set(favorites);
-    if (newFavorites.has(font.id)) {
-      newFavorites.delete(font.id);
-    } else {
-      newFavorites.add(font.id);
-    }
-    setFavorites(newFavorites);
-    localStorage.setItem('fontFavorites', JSON.stringify([...newFavorites]));
-  };
 
   const handleDownload = async () => {
     if (!font) return;
@@ -177,7 +171,9 @@ export default function FontDetail() {
               <div>
                 <h1 className="text-xl font-semibold text-foreground">{font.name}</h1>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <Badge variant="secondary" className="text-xs">{font.category}</Badge>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${categoryColors[font.category] ?? 'bg-secondary text-secondary-foreground'}`}>
+                    {font.category}
+                  </span>
                   <span className="text-xs text-muted-foreground">
                     {font.files.length} style{font.files.length !== 1 ? 's' : ''}
                   </span>
@@ -188,7 +184,7 @@ export default function FontDetail() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={toggleFavorite}
+                onClick={() => font && toggleFavorite(font.id)}
                 className={isFavorite ? 'text-red-500' : ''}
               >
                 <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />

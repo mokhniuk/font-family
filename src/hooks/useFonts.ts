@@ -11,15 +11,19 @@ import {
 export function useFonts() {
   const [fonts, setFonts] = useState<FontFamily[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [loadedFontIds, setLoadedFontIds] = useState<Set<string>>(new Set());
 
   const loadFonts = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const allFonts = await getAllFonts();
       setFonts(allFonts);
-    } catch (error) {
-      console.error('Failed to load fonts:', error);
+    } catch (err: any) {
+      const message = err?.message ?? 'Failed to load fonts';
+      setError(message);
+      console.error('Failed to load fonts:', err);
     } finally {
       setLoading(false);
     }
@@ -81,6 +85,7 @@ export function useFonts() {
   return {
     fonts,
     loading,
+    error,
     addFont: addNewFont,
     updateFont: updateExistingFont,
     removeFont,

@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -42,9 +43,6 @@ export function FontUploader({ onUpload }: FontUploaderProps) {
   const [category, setCategory] = useState<FontFamily['category']>('sans-serif');
   const [uploading, setUploading] = useState(false);
 
-  // Only admins can upload
-  if (!user) return null;
-
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -57,6 +55,7 @@ export function FontUploader({ onUpload }: FontUploaderProps) {
 
   const processFiles = useCallback(async (fileList: FileList) => {
     const validExtensions = ['.woff2', '.woff', '.ttf', '.otf', '.eot'];
+    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
 
     for (const file of Array.from(fileList)) {
       const ext = '.' + file.name.split('.').pop()?.toLowerCase();
@@ -64,6 +63,15 @@ export function FontUploader({ onUpload }: FontUploaderProps) {
         toast({
           title: 'Invalid file type',
           description: `${file.name} is not a valid font file`,
+          variant: 'destructive',
+        });
+        continue;
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        toast({
+          title: 'File too large',
+          description: `${file.name} exceeds the 50 MB limit`,
           variant: 'destructive',
         });
         continue;
@@ -152,6 +160,9 @@ export function FontUploader({ onUpload }: FontUploaderProps) {
     }
   };
 
+  // All hooks must be called before this guard
+  if (!user) return null;
+
   const weightLabels: Record<number, string> = {
     100: 'Thin', 200: 'Extra Light', 300: 'Light', 400: 'Regular',
     500: 'Medium', 600: 'Semi Bold', 700: 'Bold', 800: 'Extra Bold', 900: 'Black',
@@ -165,104 +176,108 @@ export function FontUploader({ onUpload }: FontUploaderProps) {
           Upload Font
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh] overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Upload Font Family</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          {/* Drop zone */}
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className={`
-              relative border-2 border-dashed rounded-xl p-8 text-center transition-all
-              ${isDragging ? 'border-primary bg-primary/5 scale-[1.02]' : 'border-border hover:border-muted-foreground'}
-            `}
-          >
-            <input
-              type="file"
-              accept=".woff2,.woff,.ttf,.otf,.eot"
-              multiple
-              onChange={handleFileInput}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            />
-            <Upload className={`w-10 h-10 mx-auto mb-3 ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
-            <p className="text-sm font-medium text-foreground">Drop font files here or click to browse</p>
-            <p className="text-xs text-muted-foreground mt-1">Supports WOFF2, WOFF, TTF, OTF, EOT</p>
-          </div>
+        <div className="flex-1 min-h-0 overflow-y-auto -mx-6 px-6">
+          <div className="space-y-6 py-4">
+            {/* Drop zone */}
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`
+                relative border-2 border-dashed rounded-xl p-8 text-center transition-all
+                ${isDragging ? 'border-primary bg-primary/5 scale-[1.02]' : 'border-border hover:border-muted-foreground'}
+              `}
+            >
+              <input
+                type="file"
+                accept=".woff2,.woff,.ttf,.otf,.eot"
+                multiple
+                onChange={handleFileInput}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+              <Upload className={`w-10 h-10 mx-auto mb-3 ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
+              <p className="text-sm font-medium text-foreground">Drop font files here or click to browse</p>
+              <p className="text-xs text-muted-foreground mt-1">Supports WOFF2, WOFF, TTF, OTF, EOT</p>
+            </div>
 
-          {/* File list */}
-          {files.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground">Styles ({files.length})</p>
-              <div className="max-h-40 overflow-y-auto space-y-2">
-                {files.map((file, index) => {
-                  const formats = [file.format, ...(file.variants?.map((v) => v.format) ?? [])];
-                  return (
-                    <div key={index} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <File className="w-4 h-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-sm font-medium">
-                            {weightLabels[file.weight] || file.weight}
-                            {file.style !== 'normal' && ` • ${file.style}`}
-                          </p>
-                          <div className="flex gap-1 mt-1">
-                            {formats.map((fmt, i) => (
-                              <span key={i} className="text-xs bg-muted px-1.5 py-0.5 rounded uppercase">{fmt}</span>
-                            ))}
+            {/* File list */}
+            {files.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Styles ({files.length})</p>
+                <div className="space-y-2">
+                  {files.map((file, index) => {
+                    const formats = [file.format, ...(file.variants?.map((v) => v.format) ?? [])];
+                    return (
+                      <div key={index} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <File className="w-4 h-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm font-medium">
+                              {weightLabels[file.weight] || file.weight}
+                              {file.style !== 'normal' && ` • ${file.style}`}
+                            </p>
+                            <div className="flex gap-1 mt-1">
+                              {formats.map((fmt, i) => (
+                                <span key={i} className="text-xs bg-muted px-1.5 py-0.5 rounded uppercase">{fmt}</span>
+                              ))}
+                            </div>
                           </div>
                         </div>
+                        <button onClick={() => removeFile(index)} className="p-1 hover:bg-muted rounded">
+                          <X className="w-4 h-4 text-muted-foreground" />
+                        </button>
                       </div>
-                      <button onClick={() => removeFile(index)} className="p-1 hover:bg-muted rounded">
-                        <X className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Font Family Name</label>
+              <Input value={fontName} onChange={(e) => setFontName(e.target.value)} placeholder="e.g., Inter, Roboto, Playfair Display" />
             </div>
-          )}
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Font Family Name</label>
-            <Input value={fontName} onChange={(e) => setFontName(e.target.value)} placeholder="e.g., Inter, Roboto, Playfair Display" />
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Category</label>
+              <Select value={category} onValueChange={(v) => setCategory(v as FontFamily['category'])}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sans-serif">Sans Serif</SelectItem>
+                  <SelectItem value="serif">Serif</SelectItem>
+                  <SelectItem value="monospace">Monospace</SelectItem>
+                  <SelectItem value="display">Display</SelectItem>
+                  <SelectItem value="handwriting">Handwriting</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                Author <span className="text-muted-foreground font-normal">(optional)</span>
+              </label>
+              <Input value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="e.g., Google, Adobe" />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                Description <span className="text-muted-foreground font-normal">(optional)</span>
+              </label>
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description of the font..." rows={2} />
+            </div>
           </div>
+        </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Category</label>
-            <Select value={category} onValueChange={(v) => setCategory(v as FontFamily['category'])}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sans-serif">Sans Serif</SelectItem>
-                <SelectItem value="serif">Serif</SelectItem>
-                <SelectItem value="monospace">Monospace</SelectItem>
-                <SelectItem value="display">Display</SelectItem>
-                <SelectItem value="handwriting">Handwriting</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">
-              Author <span className="text-muted-foreground font-normal">(optional)</span>
-            </label>
-            <Input value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="e.g., Google, Adobe" />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">
-              Description <span className="text-muted-foreground font-normal">(optional)</span>
-            </label>
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description of the font..." rows={2} />
-          </div>
-
+        <DialogFooter className="shrink-0 pt-4 border-t border-border">
           <Button onClick={handleSubmit} disabled={uploading || files.length === 0} className="w-full">
             {uploading ? 'Uploading to CDN...' : 'Add to Library'}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

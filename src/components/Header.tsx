@@ -20,16 +20,16 @@ export function Header() {
   };
 
   return (
-    <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
+    <header className="border-b border-border bg-background sticky top-0 z-50">
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10 glow-subtle">
+            <div className="p-2 rounded-lg bg-primary/10">
               <Type className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-foreground">
-                Font Foundry Hub
+              <h1 className="text-xl font-semibold tracking-tight text-foreground">
+                Font Family
               </h1>
               <p className="text-xs text-muted-foreground font-mono">
                 {user ? `admin: ${user.email}` : 'Self-hosted font CDN'}

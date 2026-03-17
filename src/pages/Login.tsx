@@ -39,7 +39,7 @@ export default function Login() {
           </div>
           <div className="text-center">
             <h1 className="text-2xl font-bold text-foreground">Admin Login</h1>
-            <p className="text-sm text-muted-foreground mt-1">Font Foundry Hub</p>
+            <p className="text-sm text-muted-foreground mt-1">Font Family</p>
           </div>
         </div>
 
