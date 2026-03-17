@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  FontFamily, 
-  getAllFonts, 
-  addFont, 
-  deleteFont, 
-  generateInlineCSS 
+import {
+  FontFamily,
+  getAllFonts,
+  addFont,
+  updateFont,
+  deleteFont,
+  generateFontFaceCSS,
 } from '@/lib/fontDB';
 
 export function useFonts() {
@@ -16,7 +17,7 @@ export function useFonts() {
     setLoading(true);
     try {
       const allFonts = await getAllFonts();
-      setFonts(allFonts.sort((a, b) => b.createdAt - a.createdAt));
+      setFonts(allFonts);
     } catch (error) {
       console.error('Failed to load fonts:', error);
     } finally {
@@ -29,28 +30,24 @@ export function useFonts() {
     await loadFonts();
   }, [loadFonts]);
 
-  const updateFont = useCallback(async (font: FontFamily) => {
-    // Remove old style tag if exists
+  const updateExistingFont = useCallback(async (font: FontFamily) => {
+    // Remove the existing style tag so it gets re-injected with fresh URLs
     const oldStyle = document.getElementById(`font-${font.id}`);
-    if (oldStyle) {
-      oldStyle.remove();
-    }
+    if (oldStyle) oldStyle.remove();
     setLoadedFontIds((prev) => {
       const next = new Set(prev);
       next.delete(font.id);
       return next;
     });
-    
-    await addFont(font); // This uses put() which updates existing
+
+    await updateFont(font);
     await loadFonts();
   }, [loadFonts]);
 
   const removeFont = useCallback(async (id: string) => {
     await deleteFont(id);
     const oldStyle = document.getElementById(`font-${id}`);
-    if (oldStyle) {
-      oldStyle.remove();
-    }
+    if (oldStyle) oldStyle.remove();
     setLoadedFontIds((prev) => {
       const next = new Set(prev);
       next.delete(id);
@@ -62,7 +59,9 @@ export function useFonts() {
   const injectFont = useCallback((font: FontFamily) => {
     if (loadedFontIds.has(font.id)) return;
 
-    const css = generateInlineCSS(font);
+    const css = generateFontFaceCSS(font);
+    if (!css) return;
+
     const style = document.createElement('style');
     style.id = `font-${font.id}`;
     style.textContent = css;
@@ -75,18 +74,15 @@ export function useFonts() {
     loadFonts();
   }, [loadFonts]);
 
-  // Inject all fonts when they load
   useEffect(() => {
-    fonts.forEach((font) => {
-      injectFont(font);
-    });
+    fonts.forEach((font) => injectFont(font));
   }, [fonts, injectFont]);
 
   return {
     fonts,
     loading,
     addFont: addNewFont,
-    updateFont,
+    updateFont: updateExistingFont,
     removeFont,
     refreshFonts: loadFonts,
   };

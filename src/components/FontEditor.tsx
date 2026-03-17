@@ -290,9 +290,12 @@ export function FontEditor({ font, open, onOpenChange, onSave }: FontEditorProps
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <File className="w-4 h-4 text-muted-foreground shrink-0" />
-                      <p className="text-sm font-medium truncate max-w-[180px]">
-                        {file.name}
-                      </p>
+                      <div>
+                        <p className="text-sm font-medium truncate max-w-[180px]">{file.name}</p>
+                        {file.storageUrl && (
+                          <p className="text-xs text-muted-foreground">hosted on CDN</p>
+                        )}
+                      </div>
                     </div>
                     <button
                       onClick={() => removeFile(index)}

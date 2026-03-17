@@ -11,20 +11,18 @@ interface FontGridProps {
   onUpdate: (font: FontFamily) => Promise<void>;
   onToggleFavorite: (id: string) => void;
   favorites: Set<string>;
-  baseUrl: string;
   viewMode: 'grid' | 'list';
 }
 
-export function FontGrid({ 
-  fonts, 
-  previewText, 
-  previewSize, 
-  loading, 
-  onDelete, 
-  onUpdate, 
-  onToggleFavorite, 
-  favorites, 
-  baseUrl,
+export function FontGrid({
+  fonts,
+  previewText,
+  previewSize,
+  loading,
+  onDelete,
+  onUpdate,
+  onToggleFavorite,
+  favorites,
   viewMode,
 }: FontGridProps) {
   if (loading) {
@@ -68,7 +66,6 @@ export function FontGrid({
           onUpdate={onUpdate}
           onToggleFavorite={onToggleFavorite}
           isFavorite={favorites?.has(font.id) ?? false}
-          baseUrl={baseUrl}
           viewMode={viewMode}
         />
       ))}

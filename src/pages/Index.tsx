@@ -19,9 +19,6 @@ const Index = () => {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   
-  // Base URL for CDN-style links (current origin in production, or localhost in dev)
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-
   // Load favorites from localStorage
   useEffect(() => {
     try {
@@ -142,7 +139,6 @@ const Index = () => {
             onUpdate={updateFont}
             onToggleFavorite={toggleFavorite}
             favorites={favorites}
-            baseUrl={baseUrl}
             viewMode={viewMode}
           />
         </section>
@@ -156,7 +152,7 @@ const Index = () => {
               FontHost — Self-hosted font service
             </p>
             <p className="text-sm text-muted-foreground font-mono">
-              Fonts stored locally in IndexedDB
+              Fonts hosted on Supabase Storage
             </p>
           </div>
         </div>

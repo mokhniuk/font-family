@@ -1,9 +1,23 @@
-import { Type, Moon, Sun } from 'lucide-react';
+import { Type, Moon, Sun, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { toast } from '@/hooks/use-toast';
 
 export function Header() {
   const { theme, toggleTheme } = useTheme();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({ title: 'Signed out' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
 
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
@@ -15,26 +29,36 @@ export function Header() {
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-foreground">
-                FontHost
+                Font Foundry Hub
               </h1>
               <p className="text-xs text-muted-foreground font-mono">
-                Self-hosted font service
+                {user ? `admin: ${user.email}` : 'Self-hosted font CDN'}
               </p>
             </div>
           </div>
-          
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            className="rounded-lg"
-          >
-            {theme === 'dark' ? (
-              <Sun className="w-5 h-5" />
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              className="rounded-lg"
+            >
+              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </Button>
+
+            {user ? (
+              <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-2">
+                <LogOut className="w-4 h-4" />
+                Sign out
+              </Button>
             ) : (
-              <Moon className="w-5 h-5" />
+              <Button variant="ghost" size="sm" onClick={() => navigate('/login')} className="gap-2">
+                <LogIn className="w-4 h-4" />
+                Admin
+              </Button>
             )}
-          </Button>
+          </div>
         </div>
       </div>
     </header>
