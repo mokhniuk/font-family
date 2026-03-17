@@ -2,14 +2,17 @@
 
 A self-hosted font CDN with an admin interface. Upload your fonts once, serve them from a real URL in any project — your own alternative to Google Fonts.
 
+Works in two modes: **Supabase** (full CDN, shared across devices) or **local** (IndexedDB, no backend required).
+
 Built with React + Vite + TypeScript + Supabase.
 
 Created by **Oleg Mokhniuk**.
 
 ## Features
 
+- **Two storage modes** — Supabase CDN when credentials are provided; local IndexedDB storage otherwise (no config needed)
 - **Self-hosted CDN** — fonts stored in Supabase Storage with public URLs you can link to from any project
-- **Admin auth** — upload/edit/delete gated behind Supabase Auth; public browsing requires no login
+- **Admin auth** — upload/edit/delete gated behind Supabase Auth in Supabase mode; open in local mode
 - **Upload fonts** — drag-and-drop WOFF2, WOFF, TTF, OTF, EOT with auto-detection of weight and style from filename
 - **Live preview** — type custom text, adjust size with a slider, preview each weight/style
 - **Font detail modal** — click any card to open an animated overlay with full details: all styles, type samples, pairing ideas, and code snippets
@@ -29,13 +32,26 @@ Created by **Oleg Mokhniuk**.
 | Storage      | Supabase Storage (public `fonts` bucket)            |
 | CSS endpoint | Supabase Edge Function (`font-css`)                 |
 
-## Setup
+## Local mode (no Supabase)
+
+Run the app with no configuration — fonts are stored in your browser's IndexedDB and served via base64 data URIs. No account, no backend, no CDN links.
+
+```sh
+npm install
+npm run dev
+```
+
+Everything works: upload, preview, search, filters, favorites, edit, delete. The `@font-face` tab in "Get Code" still generates valid CSS (using embedded data URIs). CDN-specific features (CSS URL, `@import`, `<link>` tabs) are hidden since they require the Edge Function.
+
+Fonts persist across page reloads but are local to the browser — not shared across devices.
+
+## Supabase mode (CDN)
 
 ### 1. Create a Supabase project
 
 Go to [supabase.com](https://supabase.com) and create a new project.
 
-### 2. Run the schema
+### 2. Run the schema (Supabase mode)
 
 In your Supabase dashboard → **SQL Editor**, paste and run [`supabase/schema.sql`](./supabase/schema.sql).
 
@@ -132,8 +148,9 @@ src/
 ├── contexts/
 │   └── AuthContext.tsx       # Supabase auth state (user, signIn, signOut)
 ├── lib/
-│   ├── supabase.ts           # Supabase client
-│   └── fontDB.ts             # All DB + Storage CRUD, CSS generation helpers
+│   ├── supabase.ts           # Supabase client + isLocalMode flag
+│   ├── fontDB.ts             # Supabase DB + Storage CRUD, CSS generation helpers
+│   └── localFontDB.ts        # IndexedDB CRUD (used in local mode)
 ├── hooks/
 │   ├── useFonts.ts           # Font list state, loading, error, @font-face injection
 │   └── useFavorites.ts       # Favorites set, persisted to localStorage
@@ -195,10 +212,12 @@ docker run -p 3000:80 \
 
 ### Environment variables
 
-| Variable            | Required | Description                       |
-| ------------------- | -------- | --------------------------------- |
-| `SUPABASE_URL`      | Yes      | Your Supabase project URL         |
-| `SUPABASE_ANON_KEY` | Yes      | Your Supabase anon/public API key |
+| Variable            | Required             | Description                       |
+| ------------------- | -------------------- | --------------------------------- |
+| `SUPABASE_URL`      | No (enables CDN mode) | Your Supabase project URL        |
+| `SUPABASE_ANON_KEY` | No (enables CDN mode) | Your Supabase anon/public API key |
+
+Omit both to run in local mode (IndexedDB, no CDN features).
 
 ### Publishing to Docker Hub
 

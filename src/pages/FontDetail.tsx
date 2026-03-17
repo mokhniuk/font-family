@@ -15,7 +15,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FontFamily, getFont, generateCSSImport, generateCSSLink, generateFontFaceCSS, getCSSUrl } from '@/lib/fontDB';
+import { FontFamily, getFont as supabaseGetFont, generateCSSImport, generateCSSLink, generateFontFaceCSS, getCSSUrl } from '@/lib/fontDB';
+import { getFont as localGetFont } from '@/lib/localFontDB';
+import { isLocalMode } from '@/lib/supabase';
+
+const getFont = isLocalMode ? localGetFont : supabaseGetFont;
 import { useFonts } from '@/hooks/useFonts';
 import { useFavorites } from '@/hooks/useFavorites';
 import { FontEditor } from '@/components/FontEditor';
@@ -444,20 +448,22 @@ export default function FontDetail() {
             <DialogTitle>Use {font.name}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-2 mb-4">
-            <label className="text-sm font-medium text-foreground">CSS URL (via Edge Function)</label>
-            <div className="flex gap-2">
-              <Input value={cssUrl} readOnly className="font-mono text-xs flex-1" />
-              <Button size="sm" variant="secondary" onClick={() => copyToClipboard(cssUrl, 'URL')}>
-                {copied === 'URL' ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-              </Button>
+          {!isLocalMode && (
+            <div className="space-y-2 mb-4">
+              <label className="text-sm font-medium text-foreground">CSS URL (via Edge Function)</label>
+              <div className="flex gap-2">
+                <Input value={cssUrl} readOnly className="font-mono text-xs flex-1" />
+                <Button size="sm" variant="secondary" onClick={() => copyToClipboard(cssUrl, 'URL')}>
+                  {copied === 'URL' ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
 
-          <Tabs defaultValue="css" className="flex-1 flex flex-col min-h-0">
+          <Tabs defaultValue={isLocalMode ? 'fontface' : 'css'} className="flex-1 flex flex-col min-h-0">
             <TabsList className="w-full shrink-0">
-              <TabsTrigger value="css" className="flex-1">CSS</TabsTrigger>
-              <TabsTrigger value="html" className="flex-1">HTML</TabsTrigger>
+              {!isLocalMode && <TabsTrigger value="css" className="flex-1">CSS</TabsTrigger>}
+              {!isLocalMode && <TabsTrigger value="html" className="flex-1">HTML</TabsTrigger>}
               <TabsTrigger value="fontface" className="flex-1">@font-face</TabsTrigger>
             </TabsList>
 

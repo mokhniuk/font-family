@@ -4,6 +4,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
+import { isLocalMode } from '@/lib/supabase';
 
 export function Header() {
   const { theme, toggleTheme } = useTheme();
@@ -32,7 +33,7 @@ export function Header() {
                 Font Family
               </h1>
               <p className="text-xs text-muted-foreground font-mono">
-                {user ? `admin: ${user.email}` : 'Self-hosted font CDN'}
+                {isLocalMode ? 'local mode' : user ? `admin: ${user.email}` : 'Self-hosted font CDN'}
               </p>
             </div>
           </div>
@@ -47,7 +48,7 @@ export function Header() {
               {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </Button>
 
-            {user ? (
+            {!isLocalMode && (user ? (
               <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-2">
                 <LogOut className="w-4 h-4" />
                 Sign out
@@ -57,7 +58,7 @@ export function Header() {
                 <LogIn className="w-4 h-4" />
                 Admin
               </Button>
-            )}
+            ))}
           </div>
         </div>
       </div>

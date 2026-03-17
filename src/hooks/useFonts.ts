@@ -1,12 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   FontFamily,
-  getAllFonts,
-  addFont,
-  updateFont,
-  deleteFont,
+  getAllFonts as supabaseGetAll,
+  addFont as supabaseAdd,
+  updateFont as supabaseUpdate,
+  deleteFont as supabaseDelete,
   generateFontFaceCSS,
 } from '@/lib/fontDB';
+import * as localDB from '@/lib/localFontDB';
+import { isLocalMode } from '@/lib/supabase';
+
+const getAllFonts = isLocalMode ? localDB.getAllFonts : supabaseGetAll;
+const addFont    = isLocalMode ? localDB.addFont    : supabaseAdd;
+const updateFont = isLocalMode ? localDB.updateFont : supabaseUpdate;
+const deleteFont = isLocalMode ? localDB.deleteFont : supabaseDelete;
 
 export function useFonts() {
   const [fonts, setFonts] = useState<FontFamily[]>([]);
