@@ -1,166 +1,136 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Header } from '@/components/Header';
 import { FontUploader } from '@/components/FontUploader';
 import { FontGrid } from '@/components/FontGrid';
+import { FontDetailModal } from '@/components/FontDetailModal';
 import { SearchBar } from '@/components/SearchBar';
 import { FontFilters, CategoryFilter, StyleFilter, ViewMode } from '@/components/FontFilters';
 import { useFonts } from '@/hooks/useFonts';
-
-const FAVORITES_KEY = 'fonthost-favorites';
+import { useFavorites } from '@/hooks/useFavorites';
+import { useAuth } from '@/contexts/AuthContext';
+import { FontFamily } from '@/lib/fontDB';
 
 const Index = () => {
-  const { fonts, loading, addFont, updateFont, removeFont } = useFonts();
+  const { fonts, loading, error, addFont, updateFont, removeFont, refreshFonts } = useFonts();
+  const { user } = useAuth();
+  const { favorites, toggleFavorite } = useFavorites();
   const [search, setSearch] = useState('');
   const [previewText, setPreviewText] = useState('');
   const [previewSize, setPreviewSize] = useState(24);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [styleFilter, setStyleFilter] = useState<StyleFilter>('all');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  
-  // Base URL for CDN-style links (current origin in production, or localhost in dev)
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const [selectedFontId, setSelectedFontId] = useState<string | null>(null);
+  const [cardOrigin, setCardOrigin] = useState<DOMRect | null>(null);
 
-  // Load favorites from localStorage
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(FAVORITES_KEY);
-      if (stored) {
-        setFavorites(new Set(JSON.parse(stored)));
-      }
-    } catch (e) {
-      console.error('Failed to load favorites:', e);
-    }
-  }, []);
+  const selectedFont = useMemo(
+    () => (selectedFontId ? fonts.find((f) => f.id === selectedFontId) ?? null : null),
+    [selectedFontId, fonts]
+  );
 
-  // Save favorites to localStorage
-  const saveFavorites = (newFavorites: Set<string>) => {
-    setFavorites(newFavorites);
-    localStorage.setItem(FAVORITES_KEY, JSON.stringify([...newFavorites]));
-  };
-
-  const toggleFavorite = (id: string) => {
-    const newFavorites = new Set(favorites);
-    if (newFavorites.has(id)) {
-      newFavorites.delete(id);
-    } else {
-      newFavorites.add(id);
-    }
-    saveFavorites(newFavorites);
+  const handleOpenDetail = (font: FontFamily, rect: DOMRect) => {
+    setSelectedFontId(font.id);
+    setCardOrigin(rect);
   };
 
   const filteredFonts = useMemo(() => {
     return fonts.filter((font) => {
-      // Favorites filter
-      if (showFavoritesOnly && !favorites.has(font.id)) {
-        return false;
-      }
-      
-      // Search filter
+      if (showFavoritesOnly && !favorites.has(font.id)) return false;
+
       if (search.trim()) {
         const query = search.toLowerCase();
-        if (!font.name.toLowerCase().includes(query) && 
-            !font.category.toLowerCase().includes(query)) {
-          return false;
-        }
+        if (!font.name.toLowerCase().includes(query) && !font.category.toLowerCase().includes(query)) return false;
       }
-      
-      // Category filter
-      if (categoryFilter !== 'all' && font.category !== categoryFilter) {
-        return false;
-      }
-      
-      // Style filter - check if font has matching styles
+
+      if (categoryFilter !== 'all' && font.category !== categoryFilter) return false;
+
       if (styleFilter !== 'all') {
-        if (styleFilter === 'italic') {
-          const hasItalic = font.files.some(f => f.style === 'italic');
-          if (!hasItalic) return false;
-        } else if (styleFilter === 'bold') {
-          const hasBold = font.files.some(f => f.weight >= 600);
-          if (!hasBold) return false;
-        }
+        if (styleFilter === 'italic' && !font.files.some(f => f.style === 'italic')) return false;
+        if (styleFilter === 'bold' && !font.files.some(f => f.weight >= 600)) return false;
       }
-      
+
       return true;
     });
   }, [fonts, search, categoryFilter, styleFilter, showFavoritesOnly, favorites]);
 
-  const favoritesCount = useMemo(() => {
-    return fonts.filter(f => favorites.has(f.id)).length;
-  }, [fonts, favorites]);
+  const favoritesCount = useMemo(() => fonts.filter(f => favorites.has(f.id)).length, [fonts, favorites]);
+
+  const clearFilters = () => {
+    setSearch('');
+    setCategoryFilter('all');
+    setStyleFilter('all');
+    setShowFavoritesOnly(false);
+  };
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="container mx-auto px-6 py-8">
-        {/* Hero */}
-        <section className="text-center py-12 mb-8 animate-slide-up">
-          <h1 className="text-4xl md:text-5xl font-bold text-gradient mb-4">
-            Your Fonts. Your Server.
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-            Self-hosted font management. Upload, preview, and serve your fonts with complete control and privacy.
-          </p>
+      <main className="container mx-auto px-6 py-8 space-y-6">
+        {/* Toolbar: search + preview controls + upload */}
+        <div className="flex items-start gap-3">
+          <div className="flex-1">
+            <SearchBar
+              search={search}
+              onSearchChange={setSearch}
+              previewText={previewText}
+              onPreviewChange={setPreviewText}
+              previewSize={previewSize}
+              onPreviewSizeChange={setPreviewSize}
+            />
+          </div>
           <FontUploader onUpload={addFont} />
-        </section>
+        </div>
 
-        {/* Search and Filters */}
-        <section className="space-y-6 mb-8">
-          <SearchBar
-            search={search}
-            onSearchChange={setSearch}
-            previewText={previewText}
-            onPreviewChange={setPreviewText}
-            previewSize={previewSize}
-            onPreviewSizeChange={setPreviewSize}
-            fontCount={filteredFonts.length}
-          />
-          
-          <FontFilters
-            categoryFilter={categoryFilter}
-            onCategoryChange={setCategoryFilter}
-            styleFilter={styleFilter}
-            onStyleChange={setStyleFilter}
-            showFavoritesOnly={showFavoritesOnly}
-            onShowFavoritesOnlyChange={setShowFavoritesOnly}
-            favoritesCount={favoritesCount}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-          />
-        </section>
+        {/* Filters */}
+        <FontFilters
+          categoryFilter={categoryFilter}
+          onCategoryChange={setCategoryFilter}
+          styleFilter={styleFilter}
+          onStyleChange={setStyleFilter}
+          showFavoritesOnly={showFavoritesOnly}
+          onShowFavoritesOnlyChange={setShowFavoritesOnly}
+          favoritesCount={favoritesCount}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          fontCount={filteredFonts.length}
+        />
 
-        {/* Font Grid */}
-        <section>
-          <FontGrid
-            fonts={filteredFonts}
-            previewText={previewText}
-            previewSize={previewSize}
-            loading={loading}
-            onDelete={removeFont}
-            onUpdate={updateFont}
-            onToggleFavorite={toggleFavorite}
-            favorites={favorites}
-            baseUrl={baseUrl}
-            viewMode={viewMode}
-          />
-        </section>
+        {/* Font grid */}
+        <FontGrid
+          fonts={filteredFonts}
+          totalFonts={fonts.length}
+          previewText={previewText}
+          previewSize={previewSize}
+          loading={loading}
+          error={error}
+          isAdmin={!!user}
+          onDelete={removeFont}
+          onUpdate={updateFont}
+          onToggleFavorite={toggleFavorite}
+          favorites={favorites}
+          viewMode={viewMode}
+          onRetry={refreshFonts}
+          onClearFilters={clearFilters}
+          onOpenDetail={handleOpenDetail}
+        />
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-border mt-16">
-        <div className="container mx-auto px-6 py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground">
-              FontHost — Self-hosted font service
-            </p>
-            <p className="text-sm text-muted-foreground font-mono">
-              Fonts stored locally in IndexedDB
-            </p>
-          </div>
+        <div className="container mx-auto px-6 py-6">
+          <p className="text-xs text-muted-foreground">Font Family — Self-hosted font service</p>
         </div>
       </footer>
+
+      {selectedFont && cardOrigin && (
+        <FontDetailModal
+          font={selectedFont}
+          originRect={cardOrigin}
+          onClose={() => setSelectedFontId(null)}
+          onUpdate={updateFont}
+        />
+      )}
     </div>
   );
 };

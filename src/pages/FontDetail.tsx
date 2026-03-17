@@ -15,9 +15,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FontFamily, getFont, generateCSSImport, generateCSSLink, generateInlineCSS } from '@/lib/fontDB';
+import { FontFamily, getFont, generateCSSImport, generateCSSLink, generateFontFaceCSS, getCSSUrl } from '@/lib/fontDB';
 import { useFonts } from '@/hooks/useFonts';
+import { useFavorites } from '@/hooks/useFavorites';
 import { FontEditor } from '@/components/FontEditor';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
 // Font pairing suggestions based on category
@@ -36,10 +38,21 @@ const popularPairings = [
   { heading: 'Display', body: 'Serif', description: 'Eye-catching with elegant readability' },
 ];
 
+const categoryColors: Record<string, string> = {
+  'sans-serif': 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300',
+  'serif': 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300',
+  'monospace': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+  'display': 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300',
+  'handwriting': 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300',
+};
+
 export default function FontDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { fonts, updateFont } = useFonts();
+  const { user } = useAuth();
+  const { favorites, toggleFavorite } = useFavorites();
+  const isAdmin = !!user;
   const [font, setFont] = useState<FontFamily | null>(null);
   const [loading, setLoading] = useState(true);
   const [previewText, setPreviewText] = useState('The quick brown fox jumps over the lazy dog');
@@ -47,10 +60,6 @@ export default function FontDetail() {
   const [showEdit, setShowEdit] = useState(false);
   const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
-  const [favorites, setFavorites] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem('fontFavorites');
-    return saved ? new Set(JSON.parse(saved)) : new Set();
-  });
 
   useEffect(() => {
     async function loadFont() {
@@ -68,45 +77,29 @@ export default function FontDetail() {
     loadFont();
   }, [id, fonts]);
 
-  const toggleFavorite = () => {
+  const handleDownload = async () => {
     if (!font) return;
-    const newFavorites = new Set(favorites);
-    if (newFavorites.has(font.id)) {
-      newFavorites.delete(font.id);
-    } else {
-      newFavorites.add(font.id);
+
+    for (const file of font.files) {
+      const allFiles = [
+        { name: file.name, url: file.storageUrl! },
+        ...(file.variants?.map((v) => ({ name: v.name, url: v.storageUrl! })) ?? []),
+      ];
+
+      for (const f of allFiles) {
+        if (!f.url) continue;
+        const response = await fetch(f.url);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = f.name;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
     }
-    setFavorites(newFavorites);
-    localStorage.setItem('fontFavorites', JSON.stringify([...newFavorites]));
-  };
 
-  const handleDownload = () => {
-    if (!font) return;
-    font.files.forEach((file) => {
-      const blob = new Blob([file.data], { type: `font/${file.format}` });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = file.name;
-      a.click();
-      URL.revokeObjectURL(url);
-
-      // Also download variants if any
-      file.variants?.forEach((variant) => {
-        const variantBlob = new Blob([variant.data], { type: `font/${variant.format}` });
-        const variantUrl = URL.createObjectURL(variantBlob);
-        const variantA = document.createElement('a');
-        variantA.href = variantUrl;
-        variantA.download = variant.name;
-        variantA.click();
-        URL.revokeObjectURL(variantUrl);
-      });
-    });
-
-    toast({
-      title: 'Download started',
-      description: `Downloading ${font.files.length} style(s)`,
-    });
+    toast({ title: 'Download started', description: `Downloading ${font.files.length} style(s)` });
   };
 
   const copyToClipboard = async (text: string, type: string) => {
@@ -144,11 +137,10 @@ export default function FontDetail() {
     );
   }
 
-  const baseUrl = window.location.origin;
-  const cssImportCode = generateCSSImport(font, baseUrl);
-  const cssLinkCode = generateCSSLink(font, baseUrl);
-  const cssUrl = `${baseUrl}/api/fonts/${font.id}/css`;
-  const base64CSS = generateInlineCSS(font);
+  const cssUrl = getCSSUrl(font.id);
+  const cssImportCode = generateCSSImport(font.id);
+  const cssLinkCode = generateCSSLink(font.id);
+  const fontFaceCSS = generateFontFaceCSS(font);
 
   const isFavorite = favorites.has(font.id);
 
@@ -179,7 +171,9 @@ export default function FontDetail() {
               <div>
                 <h1 className="text-xl font-semibold text-foreground">{font.name}</h1>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <Badge variant="secondary" className="text-xs">{font.category}</Badge>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${categoryColors[font.category] ?? 'bg-secondary text-secondary-foreground'}`}>
+                    {font.category}
+                  </span>
                   <span className="text-xs text-muted-foreground">
                     {font.files.length} style{font.files.length !== 1 ? 's' : ''}
                   </span>
@@ -190,14 +184,16 @@ export default function FontDetail() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={toggleFavorite}
+                onClick={() => font && toggleFavorite(font.id)}
                 className={isFavorite ? 'text-red-500' : ''}
               >
                 <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => setShowEdit(true)}>
-                <Pencil className="w-5 h-5" />
-              </Button>
+              {isAdmin && (
+                <Button variant="ghost" size="icon" onClick={() => setShowEdit(true)}>
+                  <Pencil className="w-5 h-5" />
+                </Button>
+              )}
               <Button variant="secondary" onClick={() => setShowCode(true)} className="gap-2">
                 <Code className="w-4 h-4" />
                 Get Code
@@ -339,10 +335,12 @@ export default function FontDetail() {
                 </p>
               </div>
 
-              <Button variant="outline" size="sm" onClick={() => setShowEdit(true)} className="gap-2">
-                <Pencil className="w-4 h-4" />
-                Edit Info
-              </Button>
+              {isAdmin && (
+                <Button variant="outline" size="sm" onClick={() => setShowEdit(true)} className="gap-2">
+                  <Pencil className="w-4 h-4" />
+                  Edit Info
+                </Button>
+              )}
             </div>
           </section>
 
@@ -430,13 +428,14 @@ export default function FontDetail() {
         </section>
       </main>
 
-      {/* Edit Dialog */}
-      <FontEditor
-        font={font}
-        open={showEdit}
-        onOpenChange={setShowEdit}
-        onSave={handleSaveFont}
-      />
+      {isAdmin && (
+        <FontEditor
+          font={font}
+          open={showEdit}
+          onOpenChange={setShowEdit}
+          onSave={handleSaveFont}
+        />
+      )}
 
       {/* Code Dialog */}
       <Dialog open={showCode} onOpenChange={setShowCode}>
@@ -446,14 +445,10 @@ export default function FontDetail() {
           </DialogHeader>
 
           <div className="space-y-2 mb-4">
-            <label className="text-sm font-medium text-foreground">CSS URL</label>
+            <label className="text-sm font-medium text-foreground">CSS URL (via Edge Function)</label>
             <div className="flex gap-2">
               <Input value={cssUrl} readOnly className="font-mono text-xs flex-1" />
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => copyToClipboard(cssUrl, 'URL')}
-              >
+              <Button size="sm" variant="secondary" onClick={() => copyToClipboard(cssUrl, 'URL')}>
                 {copied === 'URL' ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
               </Button>
             </div>
@@ -463,14 +458,14 @@ export default function FontDetail() {
             <TabsList className="w-full shrink-0">
               <TabsTrigger value="css" className="flex-1">CSS</TabsTrigger>
               <TabsTrigger value="html" className="flex-1">HTML</TabsTrigger>
-              <TabsTrigger value="base64" className="flex-1">Base64</TabsTrigger>
+              <TabsTrigger value="fontface" className="flex-1">@font-face</TabsTrigger>
             </TabsList>
 
             <TabsContent value="css" className="flex-1 min-h-0 mt-4">
-              <ScrollArea className="h-[250px] rounded-lg border border-border">
-                <pre className="p-4 bg-secondary text-sm font-mono">
-                  <code className="text-foreground whitespace-pre">
-{`${cssImportCode}
+              <div className="relative">
+                <ScrollArea className="h-[250px] rounded-lg border border-border">
+                  <pre className="p-4 bg-secondary text-sm font-mono">
+                    <code className="text-foreground whitespace-pre">{`${cssImportCode}
 
 /* Or use HTML link */
 ${cssLinkCode}
@@ -478,34 +473,50 @@ ${cssLinkCode}
 /* Then use in your CSS */
 .your-element {
   font-family: '${font.name}', ${font.category};
-}`}
-                  </code>
-                </pre>
-              </ScrollArea>
+}`}</code>
+                  </pre>
+                </ScrollArea>
+                <Button size="sm" variant="ghost" onClick={() => copyToClipboard(cssImportCode, 'CSS')} className="absolute top-2 right-4 z-10">
+                  {copied === 'CSS' ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
             </TabsContent>
 
             <TabsContent value="html" className="flex-1 min-h-0 mt-4">
-              <ScrollArea className="h-[250px] rounded-lg border border-border">
-                <pre className="p-4 bg-secondary text-sm font-mono">
-                  <code className="text-foreground whitespace-pre">
-{`<!-- Add to your <head> -->
+              <div className="relative">
+                <ScrollArea className="h-[250px] rounded-lg border border-border">
+                  <pre className="p-4 bg-secondary text-sm font-mono">
+                    <code className="text-foreground whitespace-pre">{`<!-- Add to your <head> -->
 ${cssLinkCode}
 
 <!-- Then use in your HTML -->
 <p style="font-family: '${font.name}', ${font.category};">
   Your text here
-</p>`}
-                  </code>
-                </pre>
-              </ScrollArea>
+</p>`}</code>
+                  </pre>
+                </ScrollArea>
+                <Button size="sm" variant="ghost" onClick={() => copyToClipboard(cssLinkCode, 'HTML')} className="absolute top-2 right-4 z-10">
+                  {copied === 'HTML' ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
             </TabsContent>
 
-            <TabsContent value="base64" className="flex-1 min-h-0 mt-4">
-              <ScrollArea className="h-[250px] rounded-lg border border-border">
-                <pre className="p-4 bg-secondary text-sm font-mono">
-                  <code className="text-foreground whitespace-pre">{base64CSS}</code>
-                </pre>
-              </ScrollArea>
+            <TabsContent value="fontface" className="flex-1 min-h-0 mt-4">
+              <div className="relative">
+                <ScrollArea className="h-[250px] rounded-lg border border-border">
+                  <pre className="p-4 bg-secondary text-sm font-mono">
+                    <code className="text-foreground whitespace-pre">{`/* Paste directly into your CSS (no Edge Function needed) */
+${fontFaceCSS}
+
+.your-element {
+  font-family: '${font.name}', ${font.category};
+}`}</code>
+                  </pre>
+                </ScrollArea>
+                <Button size="sm" variant="ghost" onClick={() => copyToClipboard(fontFaceCSS, '@font-face')} className="absolute top-2 right-4 z-10">
+                  {copied === '@font-face' ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
             </TabsContent>
           </Tabs>
         </DialogContent>
