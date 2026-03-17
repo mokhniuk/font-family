@@ -221,11 +221,10 @@ Omit both to run in local mode (IndexedDB, no CDN features).
 
 ### Publishing to Docker Hub
 
-Push a version tag to trigger the GitHub Actions workflow:
+Bump the version in `package.json`, then run:
 
 ```sh
-git tag v1.0.0
-git push origin v1.0.0
+./scripts/release.sh
 ```
 
 This builds multi-arch images (`linux/amd64`, `linux/arm64`) and pushes:
@@ -234,7 +233,7 @@ This builds multi-arch images (`linux/amd64`, `linux/arm64`) and pushes:
 - `mokhniuk/font-family:1.0`
 - `mokhniuk/font-family:latest`
 
-Requires two GitHub Actions secrets: `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (create a token at Docker Hub → Account Settings → Security).
+Requires Docker Desktop with buildx enabled and an active `docker login` session.
 
 ## Development
 
