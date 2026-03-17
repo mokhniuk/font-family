@@ -16,6 +16,7 @@ interface FontGridProps {
   viewMode: 'grid' | 'list';
   onRetry?: () => void;
   onClearFilters?: () => void;
+  onOpenDetail?: (font: FontFamily, rect: DOMRect) => void;
 }
 
 export function FontGrid({
@@ -33,6 +34,7 @@ export function FontGrid({
   viewMode,
   onRetry,
   onClearFilters,
+  onOpenDetail,
 }: FontGridProps) {
   if (error) {
     return (
@@ -115,6 +117,7 @@ export function FontGrid({
           onToggleFavorite={onToggleFavorite}
           isFavorite={favorites?.has(font.id) ?? false}
           viewMode={viewMode}
+          onOpenDetail={onOpenDetail}
         />
       ))}
     </div>

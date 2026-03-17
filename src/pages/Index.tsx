@@ -2,11 +2,13 @@ import { useState, useMemo } from 'react';
 import { Header } from '@/components/Header';
 import { FontUploader } from '@/components/FontUploader';
 import { FontGrid } from '@/components/FontGrid';
+import { FontDetailModal } from '@/components/FontDetailModal';
 import { SearchBar } from '@/components/SearchBar';
 import { FontFilters, CategoryFilter, StyleFilter, ViewMode } from '@/components/FontFilters';
 import { useFonts } from '@/hooks/useFonts';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/contexts/AuthContext';
+import { FontFamily } from '@/lib/fontDB';
 
 const Index = () => {
   const { fonts, loading, error, addFont, updateFont, removeFont, refreshFonts } = useFonts();
@@ -19,6 +21,18 @@ const Index = () => {
   const [styleFilter, setStyleFilter] = useState<StyleFilter>('all');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [selectedFontId, setSelectedFontId] = useState<string | null>(null);
+  const [cardOrigin, setCardOrigin] = useState<DOMRect | null>(null);
+
+  const selectedFont = useMemo(
+    () => (selectedFontId ? fonts.find((f) => f.id === selectedFontId) ?? null : null),
+    [selectedFontId, fonts]
+  );
+
+  const handleOpenDetail = (font: FontFamily, rect: DOMRect) => {
+    setSelectedFontId(font.id);
+    setCardOrigin(rect);
+  };
 
   const filteredFonts = useMemo(() => {
     return fonts.filter((font) => {
@@ -99,6 +113,7 @@ const Index = () => {
           viewMode={viewMode}
           onRetry={refreshFonts}
           onClearFilters={clearFilters}
+          onOpenDetail={handleOpenDetail}
         />
       </main>
 
@@ -107,6 +122,15 @@ const Index = () => {
           <p className="text-xs text-muted-foreground">Font Family — Self-hosted font service</p>
         </div>
       </footer>
+
+      {selectedFont && cardOrigin && (
+        <FontDetailModal
+          font={selectedFont}
+          originRect={cardOrigin}
+          onClose={() => setSelectedFontId(null)}
+          onUpdate={updateFont}
+        />
+      )}
     </div>
   );
 };

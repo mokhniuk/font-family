@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Download, Code, Trash2, Copy, Check, Link, Pencil, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,7 @@ interface FontCardProps {
   onToggleFavorite: (id: string) => void;
   isFavorite: boolean;
   viewMode: 'grid' | 'list';
+  onOpenDetail?: (font: FontFamily, rect: DOMRect) => void;
 }
 
 export function FontCard({
@@ -53,10 +54,12 @@ export function FontCard({
   onToggleFavorite,
   isFavorite,
   viewMode,
+  onOpenDetail,
 }: FontCardProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = !!user;
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const [showCode, setShowCode] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -203,14 +206,18 @@ ${fontFaceCSS}
 
   return (
     <>
-      <div className={`group relative bg-card border border-border rounded-xl p-6 transition-colors hover:border-muted-foreground/50 ${isListView ? 'flex gap-6 items-start' : 'flex flex-col'}`}>
+      <div ref={cardRef} className={`group relative bg-card border border-border rounded-xl p-6 transition-colors hover:border-muted-foreground/50 ${isListView ? 'flex gap-6 items-start' : 'flex flex-col'}`}>
         {/* Header */}
         <div className={`${isListView ? 'shrink-0 w-48' : 'mb-3'}`}>
           <div className="flex items-start justify-between">
             <div className="min-w-0">
               <h3
                 className="text-lg font-semibold text-foreground hover:text-primary cursor-pointer transition-colors truncate"
-                onClick={() => navigate(`/font/${font.id}`)}
+                onClick={() => {
+                  const rect = cardRef.current?.getBoundingClientRect();
+                  if (onOpenDetail && rect) onOpenDetail(font, rect);
+                  else navigate(`/font/${font.id}`);
+                }}
                 title={font.name}
               >
                 {font.name}
