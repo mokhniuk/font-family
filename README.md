@@ -158,9 +158,69 @@ supabase/
         └── index.ts          # Edge Function: returns @font-face CSS for a font ID
 ```
 
+## Docker
+
+The app is published to Docker Hub as [`mokhniuk/font-family`](https://hub.docker.com/r/mokhniuk/font-family). No Node.js required — it's a static SPA served by nginx.
+
+### Quick start
+
+```sh
+docker run -p 3000:80 \
+  -e SUPABASE_URL=https://your-project-id.supabase.co \
+  -e SUPABASE_ANON_KEY=your-anon-key \
+  mokhniuk/font-family
+```
+
+Open http://localhost:3000.
+
+### With docker-compose
+
+```sh
+# Create a .env file
+echo "SUPABASE_URL=https://your-project-id.supabase.co" > .env
+echo "SUPABASE_ANON_KEY=your-anon-key" >> .env
+
+docker compose up -d
+```
+
+### Build locally
+
+```sh
+docker build -t font-family .
+docker run -p 3000:80 \
+  -e SUPABASE_URL=https://your-project-id.supabase.co \
+  -e SUPABASE_ANON_KEY=your-anon-key \
+  font-family
+```
+
+### Environment variables
+
+| Variable            | Required | Description                       |
+| ------------------- | -------- | --------------------------------- |
+| `SUPABASE_URL`      | Yes      | Your Supabase project URL         |
+| `SUPABASE_ANON_KEY` | Yes      | Your Supabase anon/public API key |
+
+### Publishing to Docker Hub
+
+Push a version tag to trigger the GitHub Actions workflow:
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+This builds multi-arch images (`linux/amd64`, `linux/arm64`) and pushes:
+
+- `mokhniuk/font-family:1.0.0`
+- `mokhniuk/font-family:1.0`
+- `mokhniuk/font-family:latest`
+
+Requires two GitHub Actions secrets: `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (create a token at Docker Hub → Account Settings → Security).
+
 ## Development
 
 ```sh
+npm install
 npm run dev      # start dev server (localhost:8080)
 npm run build    # production build
 npm run lint     # lint

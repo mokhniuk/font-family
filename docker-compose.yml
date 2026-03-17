@@ -1,0 +1,11 @@
+services:
+  font-family:
+    image: mokhniuk/font-family:latest
+    # To build locally instead: comment out `image` and uncomment `build`
+    # build: .
+    ports:
+      - "3000:80"
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+    restart: unless-stopped
