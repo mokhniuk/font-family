@@ -11,11 +11,13 @@ Created by **Oleg Mokhniuk**.
 - **Self-hosted CDN** — fonts stored in Supabase Storage with public URLs you can link to from any project
 - **Admin auth** — upload/edit/delete gated behind Supabase Auth; public browsing requires no login
 - **Upload fonts** — drag-and-drop WOFF2, WOFF, TTF, OTF, EOT with auto-detection of weight and style from filename
-- **Live preview** — type custom text, adjust size, preview each weight/style
+- **Live preview** — type custom text, adjust size with a slider, preview each weight/style
+- **Font detail modal** — click any card to open an animated overlay with full details: all styles, type samples, pairing ideas, and code snippets
 - **CDN-ready code snippets** — `@import`, `<link>`, and raw `@font-face` CSS with real hosted URLs
 - **Font metadata** — name, category, author, description, license; all editable
-- **Search & filters** — by name, category, style, favorites
-- **Dark/light mode**, grid/list view
+- **Favorites** — heart any font; state persists in localStorage and stays in sync across views
+- **Search & filters** — by name, category (serif/sans-serif/monospace/display/handwriting), style (italic/bold), and favorites
+- **Grid and list view**, dark/light mode
 
 ## Tech Stack
 
@@ -131,21 +133,23 @@ src/
 │   └── AuthContext.tsx       # Supabase auth state (user, signIn, signOut)
 ├── lib/
 │   ├── supabase.ts           # Supabase client
-│   └── fontDB.ts             # All DB + Storage CRUD, CSS generation
+│   └── fontDB.ts             # All DB + Storage CRUD, CSS generation helpers
 ├── hooks/
-│   └── useFonts.ts           # Font state, loading, @font-face injection
+│   ├── useFonts.ts           # Font list state, loading, error, @font-face injection
+│   └── useFavorites.ts       # Favorites set, persisted to localStorage
 ├── pages/
-│   ├── Index.tsx             # Main library
-│   ├── FontDetail.tsx        # Single font detail + code snippets
+│   ├── Index.tsx             # Main library (search, filters, grid)
+│   ├── FontDetail.tsx        # Single font full-page view
 │   └── Login.tsx             # Admin login (/login)
 └── components/
-    ├── Header.tsx            # Nav with login/logout
+    ├── Header.tsx            # Nav with theme toggle and login/logout
     ├── FontUploader.tsx      # Upload dialog (admin only)
-    ├── FontCard.tsx          # Font card with preview + code
+    ├── FontCard.tsx          # Font card with preview, category badge, actions
+    ├── FontDetailModal.tsx   # Animated overlay modal (expands from card)
     ├── FontEditor.tsx        # Edit metadata + files (admin only)
-    ├── FontGrid.tsx          # Grid/list layout
-    ├── FontFilters.tsx       # Category/style/favorites filters
-    └── SearchBar.tsx         # Search + preview controls
+    ├── FontGrid.tsx          # Grid/list layout with empty states
+    ├── FontFilters.tsx       # Category/style/favorites/view-mode filters
+    └── SearchBar.tsx         # Search + preview text/size controls
 
 supabase/
 ├── schema.sql                # Full DB + storage setup SQL
