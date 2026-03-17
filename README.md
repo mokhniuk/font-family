@@ -227,7 +227,7 @@ Bump the version in `package.json`, then run:
 ./scripts/release.sh
 ```
 
-This builds multi-arch images (`linux/amd64`, `linux/arm64`) and pushes:
+This builds and pushes:
 
 - `mokhniuk/font-family:1.0.0`
 - `mokhniuk/font-family:1.0`

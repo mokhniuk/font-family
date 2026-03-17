@@ -5,15 +5,17 @@ IMAGE="mokhniuk/font-family"
 VERSION=$(node -p "require('./package.json').version")
 MAJOR_MINOR="${VERSION%.*}"
 
-echo "Building $IMAGE:$VERSION (multi-arch)..."
+echo "Building $IMAGE:$VERSION..."
 
-docker buildx build \
-  --platform linux/amd64,linux/arm64 \
+docker build \
   --tag "$IMAGE:$VERSION" \
   --tag "$IMAGE:$MAJOR_MINOR" \
   --tag "$IMAGE:latest" \
-  --push \
   .
+
+docker push "$IMAGE:$VERSION"
+docker push "$IMAGE:$MAJOR_MINOR"
+docker push "$IMAGE:latest"
 
 echo ""
 echo "Published:"
