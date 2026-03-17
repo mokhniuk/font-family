@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-
 @layer base {
   :root {
     --background: 0 0% 98%;
@@ -37,8 +35,8 @@
     --radius: 0.75rem;
 
     /* Custom tokens */
-    --font-display: 'Plus Jakarta Sans', sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
+    --font-display: sans-serif;
+    --font-mono: monospace;
     
     --glow-primary: 0 0 40px hsl(35 92% 50% / 0.2);
     --glow-subtle: 0 0 60px hsl(35 92% 50% / 0.1);
